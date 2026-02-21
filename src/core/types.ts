@@ -445,3 +445,49 @@ export interface AppInstance {
   /** Tear down. */
   destroy?(): void;
 }
+
+// ── Embeddable viewer ──────────────────────────────────────────────
+
+/**
+ * An embeddable viewer is linked directly into the app process.
+ * No IPC, no serialization — the app passes VNodes directly and the
+ * viewer maintains the render tree, computes layout, and produces
+ * output (terminal ANSI, framebuffer, GPU surface, etc.).
+ *
+ * This is the interface that native Zig/Go/Rust implementations target.
+ * It extends ViewerBackend with direct-call methods that bypass
+ * protocol encoding.
+ *
+ * Architecture:
+ *   Socket viewer:    app → serialize → IPC → deserialize → viewer
+ *   Embeddable viewer: app → viewer (direct function calls)
+ */
+export interface EmbeddableViewer extends ViewerBackend {
+  /** Set the root tree directly (no serialization). */
+  setTree(root: VNode): void;
+
+  /** Apply patches directly. */
+  applyPatches(ops: PatchOp[]): void;
+
+  /** Define a slot directly. */
+  defineSlot(slot: number, value: SlotValue): void;
+
+  /** Query a computed layout rectangle for a node. */
+  getLayout(nodeId: number): ComputedLayout | null;
+
+  /** Render to the target output. Returns whether anything changed. */
+  render(): boolean;
+
+  /**
+   * Rendering target configuration.
+   * Native viewers set this to control where output goes.
+   */
+  readonly renderTarget: RenderTarget;
+}
+
+export type RenderTarget =
+  | { type: 'ansi'; fd: number }         // ANSI terminal output
+  | { type: 'framebuffer'; ptr: number }  // Raw framebuffer
+  | { type: 'texture' }                   // GPU texture (wgpu surface)
+  | { type: 'headless' }                  // No output (testing)
+  | { type: 'html'; container: string };  // DOM element ID

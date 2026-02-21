@@ -6,10 +6,10 @@
  *   - Definition table (reusable styles, data bindings, templates) → DEFINE messages
  *   - Render tree (live node hierarchy) → TREE/PATCH messages
  *
- * Wire format: 8-byte header + msgpack payload with named fields.
+ * Wire format: 8-byte header + CBOR payload with named fields.
  */
 
-import { encode, decode } from '@msgpack/msgpack';
+import { encode, decode } from 'cborg';
 import type {
   ProtocolBackend,
   ProtocolMessage,

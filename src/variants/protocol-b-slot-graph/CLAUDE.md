@@ -1,6 +1,6 @@
 # Protocol B: Unified Reactive Slot Graph
 
-**Status: Stub — needs implementation**
+**Status: Complete**
 
 ## Overview
 
@@ -10,7 +10,7 @@ operations. Anything referencing a changed slot re-renders.
 
 ## Wire Format
 
-Only two operations: SET and DEL on slots.
+Only two operations: SET and DEL on slots, encoded as CBOR (RFC 8949).
 
 ```
 SET 5 {kind: "style", color: "#e0e0e0", weight: "bold"}
@@ -25,48 +25,24 @@ SET 2 {kind: "text", style: @5, content: "goodbye"}
 DEL 2
 ```
 
-Slot references use `@N` notation in the design doc. In msgpack, these are encoded as
-integers with a marker (e.g., negative numbers or a wrapper object).
+Slot references use `@N` notation in the design doc. In CBOR, these are encoded as
+`{ref: N}` wrapper objects for clarity.
 
-## Task: Implement `SlotGraphBackend`
+## Key Files
 
-Create `backend.ts` implementing the `ProtocolBackend` interface from `../../core/types.ts`.
+- `backend.ts` — `SlotGraphBackend` class implementing `ProtocolBackend`
+- `index.ts` — Exports
 
-### Requirements
+## Implementation Notes
 
-1. **encode(message: ProtocolMessage) → Uint8Array**
-   - Convert high-level messages (TREE, PATCH, DEFINE, etc.) into SET/DEL operations
-   - A TREE message becomes a series of SET operations for each node
-   - A PATCH message becomes SET operations for changed nodes
-   - A DEFINE message maps directly to a SET on the slot
-   - Encode as msgpack
-
-2. **decode(data: Uint8Array) → ProtocolMessage**
-   - Decode SET/DEL operations back to high-level messages
-   - This is the tricky part: the decoder needs to classify what kind of slot
-     value it's looking at (node vs style vs data) and reconstruct the
-     appropriate ProtocolMessage
-   - Strategy: look at the `kind` field to determine slot type
-
-3. **encodeFrame / decodeFrame**
-   - Wrap encode/decode with the standard 8-byte frame header
-   - Use `../../core/wire.ts` helpers
-
-### Design Decisions to Make
-
-- **Slot reference encoding:** How are references like `@5` encoded in msgpack?
-  Options: negative integers, `{ref: 5}` wrapper objects, or a tagged extension type.
-  Recommend: `{ref: N}` for clarity in the prototype.
-
-- **Node-to-slot mapping:** When encoding a TREE message, assign slot IDs to nodes.
-  Strategy: use the node's `id` field + an offset (e.g., slot = nodeId + 128, since
-  0-127 are reserved).
-
-- **Children encoding:** Children arrays hold slot references. When a child is
-  inserted/removed, the parent's entire children array is re-SET.
-
-- **Reactive dependency tracking:** The viewer implementation (not this backend)
-  handles dependency tracking. This backend just serializes SET/DEL ops.
+- All messages are converted to SET/DEL slot operations
+- TREE messages flatten the node tree into individual SET ops per node
+- PATCH messages become SET ops for changed nodes, DEL ops for removed nodes
+- DEFINE messages map directly to a SET on the target slot
+- Node IDs are mapped to slot IDs via offset (slot = nodeId + 128, since 0-127 reserved)
+- Children arrays hold `{ref: slotId}` references
+- Special synthetic slots for non-slot messages: DATA → slot -1, INPUT → slot -2, ENV → slot -3
+- CBOR encoding/decoding uses the `cborg` library
 
 ### Slot Organization
 
@@ -75,24 +51,21 @@ Slots 0-127:     Reserved (viewer-populated: colors, keybinds, transitions)
 Slot 128+:       Application-defined (nodes, styles, data, schemas)
 ```
 
-### Testing
+## Design Tradeoffs
 
-Run existing tests with this backend swapped in:
+**Pros:**
+- Uniform model — everything is a slot, only SET/DEL operations
+- Natural for reactive systems (dependency tracking on slot references)
+- Easy to implement incremental updates
+
+**Cons:**
+- Heuristic needed to reconstruct high-level messages from slot ops on decode
+- Children modifications require re-SET of the parent slot
+- Slightly more complex than direct tree+patch for simple cases
+
+## Testing
+
 ```bash
-npx tsx src/harness/cli.ts --matrix
+npx tsx src/harness/cli.ts --matrix   # Compare across all protocols
+npm test                               # Run full test suite
 ```
-
-The harness will automatically compare wire sizes, parse times, and quality between
-Protocol A and Protocol B.
-
-### Files to Create
-
-- `backend.ts` — `SlotGraphBackend` class
-- `index.ts` — Exports (see protocol-a-tree-patch/index.ts for pattern)
-
-### Reference
-
-- Design doc section 4.2, "Candidate B: Unified reactive slot graph"
-- Core types: `../../core/types.ts`
-- Wire format: `../../core/wire.ts`
-- Protocol A reference: `../protocol-a-tree-patch/backend.ts`

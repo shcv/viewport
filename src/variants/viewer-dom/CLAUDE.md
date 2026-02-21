@@ -9,6 +9,8 @@ for visual testing (screenshot comparison via headless browser), development too
 and as a proof that the protocol can drive a web-based viewer.
 
 This is the "ironic but practical" web viewer mentioned in the design doc §6.3.
+It implements `ViewerBackend` and processes protocol messages decoded from CBOR
+wire format. For native embeddable viewers, see `viewer-zig/` and `viewer-go/`.
 
 ## Task: Implement `DomViewer`
 

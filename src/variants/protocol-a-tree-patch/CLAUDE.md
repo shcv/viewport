@@ -10,7 +10,7 @@ tree (live node hierarchy addressed by node IDs).
 
 ## Wire Format
 
-Messages use named fields in msgpack:
+Messages use named fields in CBOR (RFC 8949):
 
 ```
 DEFINE {slot: 5, value: {kind: "style", color: "#e0e0e0", weight: "bold"}}
@@ -18,7 +18,8 @@ TREE   {root: {id: 1, type: "box", children: [{id: 2, type: "text", content: "he
 PATCH  {ops: [{target: 2, set: {content: "goodbye"}}]}
 ```
 
-Each message is wrapped in the standard 8-byte frame header before the msgpack payload.
+Each message is wrapped in the standard 8-byte frame header before the CBOR payload.
+CBOR is used for compatibility with other protocol layers in the stack.
 
 ## Key Files
 
@@ -31,6 +32,7 @@ Each message is wrapped in the standard 8-byte frame header before the msgpack p
 - Children are serialized as a `children` array on the parent
 - Patch operations use named keys: `set`, `children_insert`, `children_remove`, etc.
 - Deserialization extracts `id`, `type`, `children`, `text_alt` from node objects; everything else becomes `props`
+- CBOR encoding/decoding uses the `cborg` library
 
 ## What to Test
 
@@ -48,4 +50,4 @@ Each message is wrapped in the standard 8-byte frame header before the msgpack p
 
 **Cons:**
 - Two namespaces (slots and node IDs) — more protocol surface
-- Named fields in msgpack add key-string overhead vs positional arrays
+- Named fields in CBOR add key-string overhead vs positional arrays

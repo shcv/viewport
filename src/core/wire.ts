@@ -1,10 +1,13 @@
 /**
- * Wire format: 8-byte binary frame header + msgpack payload.
+ * Wire format: 8-byte binary frame header + CBOR payload.
  *
  * ┌─────────┬─────────┬────────┬─────────────┬──────────────────┐
- * │ magic   │ version │ type   │ length      │ msgpack payload  │
+ * │ magic   │ version │ type   │ length      │ CBOR payload     │
  * │ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ variable         │
  * └─────────┴─────────┴────────┴─────────────┴──────────────────┘
+ *
+ * CBOR (RFC 8949) is used instead of msgpack for compatibility with
+ * other protocol layers in the stack.
  */
 
 import { MAGIC, PROTOCOL_VERSION, type FrameHeader, type MessageType } from './types.js';

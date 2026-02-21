@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@msgpack/msgpack": "^3.0.0"
+    "cborg": "^4.5.8"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -5,7 +5,7 @@
  * See CLAUDE.md for full implementation instructions.
  */
 
-import { encode, decode } from '@msgpack/msgpack';
+import { encode, decode } from 'cborg';
 import type {
   ProtocolBackend,
   ProtocolMessage,
