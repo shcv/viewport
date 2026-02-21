@@ -176,6 +176,8 @@ export class TestHarness {
       messagesByType: Object.fromEntries(byType),
       elapsedMs: performance.now() - this.startTime,
       viewerMetrics: this.viewer.getMetrics(),
+      encodeTimesMs: appToViewer.map((m) => m.encodeTimeMs),
+      decodeTimesMs: appToViewer.map((m) => m.decodeTimeMs),
     };
   }
 
@@ -285,4 +287,6 @@ export interface HarnessMetrics {
   messagesByType: Record<number, { count: number; bytes: number }>;
   elapsedMs: number;
   viewerMetrics: ViewerMetrics;
+  encodeTimesMs: number[];
+  decodeTimesMs: number[];
 }

@@ -12,7 +12,12 @@
 import type { InputEvent } from '../core/types.js';
 import { ALL_APPS } from '../test-apps/index.js';
 import { createTreePatchBackend } from '../variants/protocol-a-tree-patch/index.js';
+import { createSlotGraphBackend } from '../variants/protocol-b-slot-graph/index.js';
+import { createOpcodeBackend } from '../variants/protocol-c-opcodes/index.js';
 import { createHeadlessViewer } from '../variants/viewer-headless/index.js';
+import { createDomViewer } from '../variants/viewer-dom/index.js';
+import { createAnsiViewer } from '../variants/viewer-ansi/index.js';
+import { createGpuViewer } from '../variants/viewer-gpu/index.js';
 import { runMatrix, runSingle, formatMatrixReport, type ViewerFactory, type RunConfig } from './runner.js';
 import { formatMetrics, summarizeMetrics } from './metrics.js';
 import { runQualityChecks } from './quality.js';
@@ -158,12 +163,15 @@ function main(): void {
 
   const apps = appNames.map((name) => ALL_APPS[name]);
 
-  // Protocol backends (currently only A; B and C to be added)
-  const protocols = [createTreePatchBackend()];
+  // Protocol backends
+  const protocols = [createTreePatchBackend(), createSlotGraphBackend(), createOpcodeBackend()];
 
   // Viewer factories
   const viewers: ViewerFactory[] = [
     { name: 'Headless Viewer', create: createHeadlessViewer },
+    { name: 'DOM Viewer', create: createDomViewer },
+    { name: 'ANSI Terminal Viewer', create: createAnsiViewer },
+    { name: 'GPU Viewer', create: createGpuViewer },
   ];
 
   const interactions = opts.benchmark ? getInteractions() : undefined;

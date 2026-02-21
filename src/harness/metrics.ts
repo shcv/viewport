@@ -50,6 +50,10 @@ export function summarizeMetrics(harness: HarnessMetrics): MetricsSummary {
   // Collect times from viewer metrics
   const frameTimes = harness.viewerMetrics.frameTimesMs;
 
+  // Collect per-message encode/decode times
+  const encodeTimes = harness.encodeTimesMs ?? [];
+  const decodeTimes = harness.decodeTimesMs ?? [];
+
   const MESSAGE_TYPE_NAMES: Record<number, string> = {
     0x01: 'DEFINE',
     0x02: 'TREE',
@@ -80,12 +84,12 @@ export function summarizeMetrics(harness: HarnessMetrics): MetricsSummary {
 
     avgEncodeTimeMs: harness.totalEncodeTimeMs / msgCount,
     avgDecodeTimeMs: harness.totalDecodeTimeMs / msgCount,
-    p50EncodeTimeMs: 0, // Would need per-message data; approximate from viewer
-    p95EncodeTimeMs: 0,
-    p99EncodeTimeMs: 0,
-    p50DecodeTimeMs: 0,
-    p95DecodeTimeMs: 0,
-    p99DecodeTimeMs: 0,
+    p50EncodeTimeMs: percentile(encodeTimes, 50),
+    p95EncodeTimeMs: percentile(encodeTimes, 95),
+    p99EncodeTimeMs: percentile(encodeTimes, 99),
+    p50DecodeTimeMs: percentile(decodeTimes, 50),
+    p95DecodeTimeMs: percentile(decodeTimes, 95),
+    p99DecodeTimeMs: percentile(decodeTimes, 99),
 
     avgProcessTimeMs: harness.viewerMetrics.avgFrameTimeMs,
     p50ProcessTimeMs: percentile(frameTimes, 50),
