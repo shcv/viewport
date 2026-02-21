@@ -1,0 +1,26 @@
+{
+  "name": "viewport-harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "harness": "tsx src/harness/cli.ts",
+    "harness:bench": "tsx src/harness/cli.ts --benchmark",
+    "harness:matrix": "tsx src/harness/cli.ts --matrix",
+    "automation:demo": "tsx src/automation/demo.ts",
+    "mcp": "tsx src/mcp-server/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@msgpack/msgpack": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  }
+}
