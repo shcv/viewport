@@ -233,11 +233,17 @@ export class OpcodeBackend implements ProtocolBackend {
     if (expanded.remove) result.remove = true;
     if (expanded.replace) result.replace = this.expandNode(expanded.replace as Record<string, unknown>);
     if (expanded.childrenInsert) {
-      const ci = expanded.childrenInsert as any;
-      result.childrenInsert = { index: ci.index, node: this.expandNode(ci.node) };
+      const ci = this.expandObj(expanded.childrenInsert as Record<string, unknown>);
+      result.childrenInsert = { index: ci.index as number, node: this.expandNode(ci.node as Record<string, unknown>) };
     }
-    if (expanded.childrenRemove) result.childrenRemove = expanded.childrenRemove as any;
-    if (expanded.childrenMove) result.childrenMove = expanded.childrenMove as any;
+    if (expanded.childrenRemove) {
+      const cr = this.expandObj(expanded.childrenRemove as Record<string, unknown>);
+      result.childrenRemove = cr as any;
+    }
+    if (expanded.childrenMove) {
+      const cm = this.expandObj(expanded.childrenMove as Record<string, unknown>);
+      result.childrenMove = cm as any;
+    }
     if (expanded.transition) result.transition = expanded.transition as number;
 
     return result;
