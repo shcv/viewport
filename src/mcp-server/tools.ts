@@ -8,8 +8,8 @@
 
 import type { AppFactory, InputEvent } from '../core/types.js';
 import { ALL_APPS } from '../test-apps/index.js';
-import { createTreePatchBackend } from '../variants/protocol-a-tree-patch/index.js';
-import { createHeadlessViewer } from '../variants/viewer-headless/index.js';
+import { createTreePatchBackend } from '../protocol/variants/tree-patch/index.js';
+import { createHeadlessViewer } from '../viewer/headless/index.js';
 import { ViewportPage, createPage } from '../automation/page.js';
 import { runQualityChecks } from '../harness/quality.js';
 import { summarizeMetrics } from '../harness/metrics.js';

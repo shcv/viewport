@@ -16,9 +16,9 @@ import type {
   FrameHeader,
   MessageType,
   SessionId,
-} from '../../core/types.js';
-import { MessageType as MT, SESSION_NONE } from '../../core/types.js';
-import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../core/wire.js';
+} from '../../../core/types.js';
+import { MessageType as MT, SESSION_NONE } from '../../../core/types.js';
+import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../../core/wire.js';
 
 export class TreePatchBackend implements ProtocolBackend {
   readonly name = 'Protocol A: Tree + Patch';

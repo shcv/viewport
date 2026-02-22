@@ -7,7 +7,7 @@ pub fn build(b: *std.Build) void {
     // ── Library ──────────────────────────────────────────────────────
 
     const lib = b.addStaticLibrary(.{
-        .name = "viewport-viewer",
+        .name = "viewport",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
@@ -25,17 +25,18 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
 
     const test_sources = [_][]const u8{
-        "src/types.zig",
-        "src/wire.zig",
-        "src/tree.zig",
-        "src/text_projection.zig",
-        "src/viewer.zig",
+        "src/core/types.zig",
+        "src/core/wire.zig",
+        "src/core/tree.zig",
+        "src/core/text_projection.zig",
+        "src/viewer/viewer.zig",
+        "src/source/source.zig",
         "src/main.zig",
     };
 
-    for (test_sources) |source| {
+    for (test_sources) |source_file| {
         const t = b.addTest(.{
-            .root_source_file = b.path(source),
+            .root_source_file = b.path(source_file),
             .target = target,
             .optimize = optimize,
         });
@@ -47,7 +48,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "viewport-example",
-        .root_source_file = b.path("src/example.zig"),
+        .root_source_file = b.path("src/viewer/example.zig"),
         .target = target,
         .optimize = optimize,
     });

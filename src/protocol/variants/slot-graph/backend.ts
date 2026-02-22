@@ -12,9 +12,9 @@ import type {
   FrameHeader,
   VNode,
   SessionId,
-} from '../../core/types.js';
-import { MessageType, SESSION_NONE } from '../../core/types.js';
-import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../core/wire.js';
+} from '../../../core/types.js';
+import { MessageType, SESSION_NONE } from '../../../core/types.js';
+import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../../core/wire.js';
 
 /** Offset for mapping node IDs to slot IDs (0-127 reserved for viewer). */
 const NODE_SLOT_OFFSET = 128;

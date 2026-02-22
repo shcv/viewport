@@ -4,26 +4,27 @@
  * Connects an app → protocol backend → viewer backend, with full
  * instrumentation of the message pipeline. This is the central
  * orchestrator that the runner, automation, and MCP server all use.
+ *
+ * Internally uses SourceState (pending/published) on the app side and
+ * ViewerState (dirty tracking) on the viewer side. Default mode uses
+ * flushImmediate to preserve synchronous behavior for testing.
  */
 
 import type {
   AppFactory,
   AppInstance,
-  AppConnection,
   ProtocolBackend,
   ViewerBackend,
   ProtocolMessage,
   InputEvent,
-  VNode,
-  PatchOp,
-  SlotValue,
-  SchemaColumn,
   EnvInfo,
   RenderTree,
   ViewerMetrics,
   ScreenshotResult,
 } from '../core/types.js';
 import { MessageType } from '../core/types.js';
+import { SourceState } from '../source/state.js';
+import { SourceConnection } from '../source/connection.js';
 
 export interface HarnessConfig {
   app: AppFactory;
@@ -48,9 +49,11 @@ export class TestHarness {
   readonly protocol: ProtocolBackend;
   readonly viewer: ViewerBackend;
 
+  /** Source-side local state (pending + published). */
+  readonly sourceState: SourceState = new SourceState();
+
   private appInstance: AppInstance | null = null;
-  private inputHandlers: Array<(event: InputEvent) => void> = [];
-  private resizeHandlers: Array<(width: number, height: number) => void> = [];
+  private connection: SourceConnection | null = null;
   private messageLog: MessageRecord[] = [];
   private _width: number;
   private _height: number;
@@ -85,17 +88,23 @@ export class TestHarness {
     // Wire viewer's outbound messages (INPUT events) to app
     this.viewer.onMessage((msg) => {
       if (msg.type === MessageType.INPUT) {
-        for (const handler of this.inputHandlers) {
-          handler(msg.event);
-        }
+        this.connection?.deliverInput(msg.event);
       }
     });
 
-    // Create instrumented connection for the app
-    const connection = this.createConnection();
+    // Create SourceState-backed connection
+    this.connection = new SourceConnection(this.sourceState, {
+      width: this._width,
+      height: this._height,
+      outputMode: { type: 'headless' },
+    });
+
+    // Set up immediate flush: every mutation on the SourceState
+    // is flushed synchronously through the encode→decode→viewer pipeline.
+    this.setupImmediateFlush();
 
     // Start the app
-    this.appInstance = this.app.create(connection);
+    this.appInstance = this.app.create(this.connection);
   }
 
   /** Tear down. */
@@ -103,6 +112,7 @@ export class TestHarness {
     this.appInstance?.destroy?.();
     this.viewer.destroy();
     this.appInstance = null;
+    this.connection = null;
   }
 
   /** Send an input event through the pipeline. */
@@ -111,19 +121,15 @@ export class TestHarness {
     const msg: ProtocolMessage = { type: MessageType.INPUT, event };
     this.recordMessage('viewer-to-app', msg, 0, 0, 0, 0);
 
-    // Deliver to app's input handlers
-    for (const handler of this.inputHandlers) {
-      handler(event);
-    }
+    // Deliver to app's input handlers via the connection
+    this.connection?.deliverInput(event);
   }
 
   /** Resize the viewport. */
   resize(width: number, height: number): void {
     this._width = width;
     this._height = height;
-    for (const handler of this.resizeHandlers) {
-      handler(width, height);
-    }
+    this.connection?.deliverResize(width, height);
   }
 
   /** Get the current render tree. */
@@ -192,42 +198,32 @@ export class TestHarness {
 
   // ── Internal ─────────────────────────────────────────────────
 
-  private createConnection(): AppConnection {
-    const self = this;
+  /**
+   * Set up immediate-flush mode: intercept SourceState mutations
+   * so each one is flushed synchronously through the pipeline.
+   * This preserves the current synchronous test behavior.
+   */
+  private setupImmediateFlush(): void {
+    const state = this.sourceState;
 
-    return {
-      get width() { return self._width; },
-      get height() { return self._height; },
-      outputMode: { type: 'headless' as const },
+    const origSetTree = state.setTree.bind(state);
+    const origPatch = state.patch.bind(state);
+    const origDefineSlot = state.defineSlot.bind(state);
+    const origDefineSchema = state.defineSchema.bind(state);
+    const origEmitData = state.emitData.bind(state);
 
-      setTree(root: VNode): void {
-        self.pipeToViewer({ type: MessageType.TREE, root });
-      },
-
-      patch(ops: PatchOp[]): void {
-        self.pipeToViewer({ type: MessageType.PATCH, ops });
-      },
-
-      defineSlot(slot: number, value: SlotValue): void {
-        self.pipeToViewer({ type: MessageType.DEFINE, slot, value });
-      },
-
-      defineSchema(slot: number, columns: SchemaColumn[]): void {
-        self.pipeToViewer({ type: MessageType.SCHEMA, slot, columns });
-      },
-
-      emitData(schemaSlot: number, row: unknown[] | Record<string, unknown>): void {
-        self.pipeToViewer({ type: MessageType.DATA, schema: schemaSlot, row });
-      },
-
-      onInput(handler: (event: InputEvent) => void): void {
-        self.inputHandlers.push(handler);
-      },
-
-      onResize(handler: (width: number, height: number) => void): void {
-        self.resizeHandlers.push(handler);
-      },
+    const doFlush = () => {
+      const messages = state.flush();
+      for (const msg of messages) {
+        this.pipeToViewer(msg);
+      }
     };
+
+    state.setTree = (...args) => { origSetTree(...args); doFlush(); };
+    state.patch = (...args) => { origPatch(...args); doFlush(); };
+    state.defineSlot = (...args) => { origDefineSlot(...args); doFlush(); };
+    state.defineSchema = (...args) => { origDefineSchema(...args); doFlush(); };
+    state.emitData = (...args) => { origEmitData(...args); doFlush(); };
   }
 
   /** Encode → measure → decode → process pipeline. */

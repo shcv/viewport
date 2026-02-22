@@ -1,15 +1,14 @@
-# Go Embeddable Viewer
+# Go Viewport Library
 
-**Status: Complete**
+**Status: Viewer complete, source-side stub**
 
 ## Overview
 
-A native Go implementation of the Viewport protocol embeddable viewer. This viewer
-can be linked directly into Go applications — no IPC, no serialization. The app
-passes VNodes directly and the viewer maintains the render tree, computes text
-projection, and collects metrics.
+A native Go implementation of the Viewport protocol. Includes both a viewer
+(embeddable, direct-call) and a source-side library (stub). All files live in a
+single `package viewer` following Go package conventions.
 
-This implements the `EmbeddableViewer` pattern from `../../core/types.ts` in Go.
+This implements the `EmbeddableViewer` pattern from `../src/core/types.ts` in Go.
 
 ## Architecture
 
@@ -29,12 +28,13 @@ The viewer supports both modes:
 - `tree.go` — Tree operations: SetTreeRoot, ApplyPatch, WalkTree, FindByID, CountNodes
 - `text_projection.go` — Text projection engine matching TypeScript rules
 - `viewer.go` — Main Viewer struct with full embeddable viewer API
+- `source.go` — Source-side local state (stub: interface defined, implementation TODO)
 - `viewer_test.go` — Comprehensive test suite
 
 ## Building and Testing
 
 ```bash
-cd src/variants/viewer-go
+cd go
 go test ./...            # Run all tests
 go test -v ./...         # Verbose output
 go test -bench=. ./...   # Run benchmarks
@@ -123,10 +123,30 @@ func main() {
 - The `applyPropsSet` function in tree.go handles property updates — add new properties there
 - For CBOR wire protocol integration, use `EncodeFrame`/`DecodeFrame` + `FrameReader`
 
+## What Is Implemented
+
+- All core types matching `src/core/types.ts`
+- Binary frame header encode/decode + CBOR support
+- FrameReader for streaming frame parsing
+- Full render tree operations
+- Complete text projection engine
+- Viewer struct with full embeddable API
+- Metrics collection
+- SourceState stub interface
+
+## What Is NOT Implemented (TODOs)
+
+- **SourceState implementation**: Pending/published state, flush, coalescing
+- **Layout engine**: Computed layout is always nil
+- **Viewer dirty tracking**: Currently processes eagerly
+
 ## Reference
 
-- TypeScript types: `../../core/types.ts`
-- TypeScript tree utilities: `../../core/tree.ts`
-- TypeScript text projection: `../../core/text-projection.ts`
-- TypeScript headless viewer: `../viewer-headless/viewer.ts`
-- EmbeddableViewer interface: `../../core/types.ts` (EmbeddableViewer)
+- TypeScript types: `../src/core/types.ts`
+- TypeScript tree utilities: `../src/core/tree.ts`
+- TypeScript text projection: `../src/core/text-projection.ts`
+- TypeScript headless viewer: `../src/viewer/headless/viewer.ts`
+- TypeScript source state: `../src/source/state.ts`
+- TypeScript viewer state: `../src/viewer/state.ts`
+- Property key enums: `../src/core/prop-keys.ts`
+- EmbeddableViewer interface: `../src/core/types.ts` (EmbeddableViewer)

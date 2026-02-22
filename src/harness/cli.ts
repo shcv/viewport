@@ -11,13 +11,13 @@
 
 import type { InputEvent } from '../core/types.js';
 import { ALL_APPS } from '../test-apps/index.js';
-import { createTreePatchBackend } from '../variants/protocol-a-tree-patch/index.js';
-import { createSlotGraphBackend } from '../variants/protocol-b-slot-graph/index.js';
-import { createOpcodeBackend } from '../variants/protocol-c-opcodes/index.js';
-import { createHeadlessViewer } from '../variants/viewer-headless/index.js';
-import { createDomViewer } from '../variants/viewer-dom/index.js';
-import { createAnsiViewer } from '../variants/viewer-ansi/index.js';
-import { createGpuViewer } from '../variants/viewer-gpu/index.js';
+import { createTreePatchBackend } from '../protocol/variants/tree-patch/index.js';
+import { createSlotGraphBackend } from '../protocol/variants/slot-graph/index.js';
+import { createOpcodeBackend } from '../protocol/variants/opcodes/index.js';
+import { createHeadlessViewer } from '../viewer/headless/index.js';
+import { createDomViewer } from '../viewer/dom/index.js';
+import { createAnsiViewer } from '../viewer/ansi/index.js';
+import { createGpuViewer } from '../viewer/gpu/index.js';
 import { runMatrix, runSingle, formatMatrixReport, type ViewerFactory, type RunConfig } from './runner.js';
 import { formatMetrics, summarizeMetrics } from './metrics.js';
 import { runQualityChecks } from './quality.js';

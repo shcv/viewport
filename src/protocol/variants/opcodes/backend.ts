@@ -13,9 +13,9 @@ import type {
   VNode,
   PatchOp,
   SessionId,
-} from '../../core/types.js';
-import { MessageType, SESSION_NONE } from '../../core/types.js';
-import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../core/wire.js';
+} from '../../../core/types.js';
+import { MessageType, SESSION_NONE } from '../../../core/types.js';
+import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../../core/wire.js';
 
 // Opcodes
 const OP_SET = 0;

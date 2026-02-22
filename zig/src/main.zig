@@ -1,20 +1,26 @@
-// main.zig — Root module for the Viewport protocol embeddable viewer.
+// main.zig — Root module for the Viewport protocol library (Zig).
 //
 // This module re-exports all public symbols so downstream consumers
 // can do:
 //
 //     const viewport = @import("viewport");
 //     var viewer = viewport.Viewer.init(allocator);
+//
+// The library is organized into:
+//   core/    — shared types, wire format, tree ops, text projection
+//   source/  — source-side local state (pending/published/flush)
+//   viewer/  — viewer-side implementation
 
-pub const types = @import("types.zig");
-pub const wire = @import("wire.zig");
-pub const tree = @import("tree.zig");
-pub const text_projection = @import("text_projection.zig");
-pub const viewer = @import("viewer.zig");
+pub const types = @import("core/types.zig");
+pub const wire = @import("core/wire.zig");
+pub const tree = @import("core/tree.zig");
+pub const text_projection = @import("core/text_projection.zig");
+pub const viewer_mod = @import("viewer/viewer.zig");
+pub const source = @import("source/source.zig");
 
 // ── Convenience re-exports ─────────────────────────────────────────
 
-pub const Viewer = viewer.Viewer;
+pub const Viewer = viewer_mod.Viewer;
 
 pub const VNode = types.VNode;
 pub const RenderNode = types.RenderNode;
@@ -59,6 +65,9 @@ pub const findByText = tree.findByText;
 pub const textProjection = text_projection.textProjection;
 pub const textProjectionWithOptions = text_projection.textProjectionWithOptions;
 pub const TextProjectionOptions = text_projection.TextProjectionOptions;
+
+// Source-side state
+pub const SourceState = source.SourceState;
 
 // ── Tests ──────────────────────────────────────────────────────────
 

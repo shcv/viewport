@@ -9,7 +9,7 @@
 // Run with: zig build run
 
 const std = @import("std");
-const viewport = @import("main.zig");
+const viewport = @import("../main.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();

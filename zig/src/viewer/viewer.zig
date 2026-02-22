@@ -12,10 +12,10 @@
 //   Embeddable viewer: app -> viewer (direct function calls)
 
 const std = @import("std");
-const types = @import("types.zig");
-const tree_mod = @import("tree.zig");
-const text_proj = @import("text_projection.zig");
-const wire = @import("wire.zig");
+const types = @import("../core/types.zig");
+const tree_mod = @import("../core/tree.zig");
+const text_proj = @import("../core/text_projection.zig");
+const wire = @import("../core/wire.zig");
 const Allocator = std.mem.Allocator;
 
 const RenderTree = types.RenderTree;
