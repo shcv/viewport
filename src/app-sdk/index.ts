@@ -20,3 +20,33 @@ export type {
   TransportAddress,
   ParsedViewportUri,
 } from '../core/transport.js';
+export {
+  createDefaultRegistry,
+  createConnectionPair,
+  createInProcessPair,
+} from '../transports/index.js';
+export type {
+  TransportConnection,
+  TransportConnector,
+  TransportListener,
+  ConnectOptions,
+  ListenOptions,
+  ListenResult,
+  ConnectionInfo,
+  SelfRenderDriver,
+  SelfRenderOptions,
+} from '../core/transport-api.js';
+export { TransportRegistry } from '../core/transport-registry.js';
+export {
+  mergeConfigs,
+  parseViewerArgs,
+  resolveViewerConfig,
+  buildViewportEnv,
+  DEFAULT_CONFIG,
+} from '../core/viewer-config.js';
+export type {
+  ViewerConfig,
+  DisplayConfig,
+  SessionConfig,
+  ParsedCli,
+} from '../core/viewer-config.js';
