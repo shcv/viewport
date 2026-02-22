@@ -334,6 +334,8 @@ export interface RenderNode {
   props: NodeProps;
   children: RenderNode[];
   computedLayout?: ComputedLayout;
+  /** Sequence number of the last update that touched this node. */
+  version: bigint;
 }
 
 export interface ComputedLayout {
@@ -349,6 +351,12 @@ export interface RenderTree {
   schemas: Map<number, SchemaColumn[]>;
   dataRows: Map<number, unknown[][]>; // schema slot -> rows
   nodeIndex: Map<number, RenderNode>;
+  /** Per-slot version tracking (seq of last update). */
+  slotVersions: Map<number, bigint>;
+  /** Per-schema version tracking (seq of last update). */
+  schemaVersions: Map<number, bigint>;
+  /** Per-data-stream version tracking (seq of last update). */
+  dataVersions: Map<number, bigint>;
 }
 
 // ── Backend interfaces ─────────────────────────────────────────────
@@ -384,8 +392,9 @@ export interface ViewerBackend {
   /** Initialize with environment info. */
   init(env: EnvInfo): void;
 
-  /** Process a decoded protocol message, updating internal state. */
-  processMessage(msg: ProtocolMessage): void;
+  /** Process a decoded protocol message, updating internal state.
+   *  When seq is provided, per-node/slot version checks discard stale updates. */
+  processMessage(msg: ProtocolMessage, seq?: bigint): void;
 
   /** Get the current render tree state. */
   getTree(): RenderTree;

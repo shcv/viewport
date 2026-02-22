@@ -43,24 +43,29 @@ export class HeadlessViewer implements ViewerBackend {
     this.metrics = createMetrics();
   }
 
-  processMessage(msg: ProtocolMessage): void {
+  processMessage(msg: ProtocolMessage, seq?: bigint): void {
     const start = performance.now();
+    const version = seq ?? 0n;
     this.metrics.messagesProcessed++;
 
     switch (msg.type) {
-      case MessageType.DEFINE:
+      case MessageType.DEFINE: {
+        const prev = this.tree.slotVersions.get(msg.slot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         this.tree.slots.set(msg.slot, msg.value);
+        this.tree.slotVersions.set(msg.slot, version);
         this.metrics.slotCount = this.tree.slots.size;
         break;
+      }
 
       case MessageType.TREE:
-        setTreeRoot(this.tree, msg.root);
+        setTreeRoot(this.tree, msg.root, version);
         this.metrics.treeNodeCount = countNodes(this.tree.root);
         this.metrics.treeDepth = treeDepth(this.tree.root);
         break;
 
       case MessageType.PATCH: {
-        const { applied, failed } = applyPatches(this.tree, msg.ops);
+        const { applied, failed } = applyPatches(this.tree, msg.ops, version);
         this.metrics.patchesApplied += applied;
         this.metrics.patchesFailed += failed;
         this.metrics.treeNodeCount = countNodes(this.tree.root);
@@ -68,12 +73,18 @@ export class HeadlessViewer implements ViewerBackend {
         break;
       }
 
-      case MessageType.SCHEMA:
+      case MessageType.SCHEMA: {
+        const prev = this.tree.schemaVersions.get(msg.slot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         this.tree.schemas.set(msg.slot, msg.columns);
+        this.tree.schemaVersions.set(msg.slot, version);
         break;
+      }
 
       case MessageType.DATA: {
         const schemaSlot = msg.schema ?? 0;
+        const prev = this.tree.dataVersions.get(schemaSlot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         if (!this.tree.dataRows.has(schemaSlot)) {
           this.tree.dataRows.set(schemaSlot, []);
         }
@@ -81,6 +92,7 @@ export class HeadlessViewer implements ViewerBackend {
         if (rowArray) {
           this.tree.dataRows.get(schemaSlot)!.push(rowArray);
         }
+        this.tree.dataVersions.set(schemaSlot, version);
         this.metrics.dataRowCount++;
         break;
       }
