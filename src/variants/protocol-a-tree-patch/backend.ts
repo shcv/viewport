@@ -3,7 +3,7 @@
  *
  * This is the reference implementation — the "preferred direction" from
  * the design doc. Separate concepts for:
- *   - Definition table (reusable styles, data bindings, templates) → DEFINE messages
+ *   - Definition table (reusable styles, data bindings, schemas) → DEFINE messages
  *   - Render tree (live node hierarchy) → TREE/PATCH messages
  *
  * Wire format: 8-byte header + CBOR payload with named fields.

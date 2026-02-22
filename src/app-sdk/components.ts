@@ -36,7 +36,7 @@ type TextProps = Pick<
 
 type ScrollProps = BoxProps & Pick<
   NodeProps,
-  'virtualHeight' | 'virtualWidth' | 'scrollTop' | 'scrollLeft' | 'template'
+  'virtualHeight' | 'virtualWidth' | 'scrollTop' | 'scrollLeft' | 'schema'
 >;
 
 type InputFieldProps = Pick<

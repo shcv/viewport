@@ -214,7 +214,7 @@ export class TestHarness {
         self.pipeToViewer({ type: MessageType.SCHEMA, slot, columns });
       },
 
-      emitData(schemaSlot: number, row: unknown[]): void {
+      emitData(schemaSlot: number, row: unknown[] | Record<string, unknown>): void {
         self.pipeToViewer({ type: MessageType.DATA, schema: schemaSlot, row });
       },
 

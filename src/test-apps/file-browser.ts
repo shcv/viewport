@@ -1,7 +1,7 @@
 /**
  * File browser app — scrollable list with structured data.
  *
- * Exercises: schema definition, data records, row templates,
+ * Exercises: schema definition, data records, schema display hints,
  * scroll regions, virtualization, selection state, sorting.
  */
 
@@ -26,7 +26,6 @@ const ID = {
 } as const;
 
 const SCHEMA_SLOT = 100;
-const TEMPLATE_SLOT = 201;
 
 interface FileEntry {
   name: string;
@@ -72,20 +71,6 @@ export const fileBrowserApp = defineApp({
 
     // Define the schema
     conn.defineSchema(SCHEMA_SLOT, columns);
-
-    // Define row template
-    conn.defineSlot(TEMPLATE_SLOT, {
-      kind: 'row_template',
-      schema: SCHEMA_SLOT,
-      layout: {
-        id: 0, type: 'box', props: { direction: 'row', gap: 16 },
-        children: [
-          { id: 0, type: 'text', props: { style: 2 } }, // col 0: name
-          { id: 0, type: 'text', props: { format: 'human_bytes', style: 5 } }, // col 1: size
-          { id: 0, type: 'text', props: { format: 'relative_time', style: 5 } }, // col 2: modified
-        ],
-      },
-    });
 
     function sortFiles() {
       files.sort((a, b) => {
@@ -171,6 +156,7 @@ export const fileBrowserApp = defineApp({
             id: ID.FILE_LIST,
             flex: 1,
             virtualHeight: files.length * 24,
+            schema: SCHEMA_SLOT,
           }, files.map((file, i) => buildFileRow(file, i))),
 
           // Status bar

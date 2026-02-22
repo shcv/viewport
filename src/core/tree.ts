@@ -208,3 +208,25 @@ export function findById(root: RenderNode | null, id: number): RenderNode | null
   const results = findNodes(root, (n) => n.id === id);
   return results[0] ?? null;
 }
+
+/**
+ * Convert a data row (array or dict) to a positional array.
+ * Dict records are unpacked using schema column names.
+ * Returns the array, or null if the row can't be converted.
+ */
+export function toRowArray(
+  row: unknown[] | Record<string, unknown>,
+  schemaSlot: number,
+  tree: RenderTree,
+): unknown[] | null {
+  if (Array.isArray(row)) {
+    return row;
+  }
+  // Dict record — convert to positional array using schema
+  const schema = tree.schemas.get(schemaSlot);
+  if (!schema) {
+    // No schema, store dict values in insertion order
+    return Object.values(row);
+  }
+  return schema.map((col) => row[col.name]);
+}

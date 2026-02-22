@@ -94,7 +94,7 @@ Matching the TypeScript reference (`src/core/text-projection.ts`):
 |-------------|---------------------------------------------------------------|
 | text        | `props.content`                                               |
 | box         | Children joined by `\n` (column) or `\t` (row), skip empty   |
-| scroll      | Children content, plus data rows if template slot is set      |
+| scroll      | Children content, plus data rows if schema ref is set         |
 | input       | `props.value` or `props.placeholder`                          |
 | image       | `props.alt_text` or `[image]`                                 |
 | canvas      | `props.alt_text` or `[image]`                                 |
