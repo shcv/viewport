@@ -1,6 +1,6 @@
 # Viewport Transport Specification
 
-**Status:** Draft v0.1
+**Status:** Draft v0.2
 **Date:** February 2026
 
 ---
@@ -30,6 +30,31 @@ When an app starts, it reads `VIEWPORT` and enters one of three output modes:
 The output mode is queryable by the application, so it can adapt which UI elements
 to draw and how to draw them (e.g., skip canvas nodes in text mode, simplify layouts
 in ANSI mode, use full rich rendering with a viewer).
+
+### 1.1 Design Goals
+
+1. **Modular transports.** Each transport scheme (unix, tcp, ws, etc.) is a
+   self-contained module implementing a standard interface. Adding a new transport
+   means implementing one or two interfaces and registering them — no changes to
+   core code.
+
+2. **Symmetric architecture.** The app side (connector) and viewer side (listener)
+   use the same `TransportConnection` type. Once a connection is established, both
+   sides interact identically regardless of which transport carried the bytes.
+
+3. **Thin transport layer.** Transports carry framed bytes, nothing more. Protocol
+   encoding, message semantics, and tree operations all happen above the transport
+   layer. This keeps each transport implementation small (typically < 200 lines).
+
+4. **Output mode as first-class concept.** The resolved output mode (text, ansi,
+   viewer, headless) is queryable by apps via `conn.outputMode`. Apps and the
+   standard component library use this to adapt rendering — the same `setTree()`
+   call produces appropriate output in every mode.
+
+5. **Many transports, easy maintenance.** The protocol supports a large number of
+   transport schemes because the modular architecture makes each one cheap to add
+   and maintain. Not all platforms support all schemes — the registry reports
+   unsupported schemes at connection time.
 
 ---
 
@@ -522,3 +547,319 @@ VIEWPORT=vsock://2:5000 my-app
 # Testing / CI
 VIEWPORT=headless: my-app
 ```
+
+---
+
+## 10. Transport Architecture
+
+The transport layer is modular. Each transport scheme is implemented as an
+independent module that registers with a central `TransportRegistry`. Both the
+app side and viewer side use the same registry and connection type.
+
+### 10.1 Core Interfaces
+
+Four interfaces define the transport contract. Implementations live in
+`src/transports/`; interfaces live in `src/core/transport-api.ts`.
+
+#### TransportConnection
+
+A live bidirectional channel between an app and a viewer. Both sides get the same
+type — the transport is symmetric once established.
+
+```typescript
+interface TransportConnection {
+  send(data: Uint8Array): void;
+  onMessage(handler: (data: Uint8Array) => void): void;
+  onError(handler: (error: Error) => void): void;
+  onClose(handler: () => void): void;
+  close(): void;
+  readonly connected: boolean;
+  readonly info: ConnectionInfo;
+}
+```
+
+Messages are complete protocol frames (8-byte header + CBOR payload). The transport
+handles frame alignment over byte streams — callers always send/receive whole frames.
+
+#### TransportConnector (app side)
+
+Opens a connection to a viewer. Each connector declares which URI schemes it handles.
+
+```typescript
+interface TransportConnector {
+  readonly schemes: TransportScheme[];
+  connect(address: TransportAddress, options: ConnectOptions): Promise<TransportConnection>;
+  destroy?(): void;
+}
+```
+
+A single connector can handle multiple schemes when they share implementation. For
+example, `NetSocketConnector` handles `unix`, `unix-abstract`, `tcp`, and `tls` —
+all use Node's `net` module with different address formats.
+
+#### TransportListener (viewer side)
+
+Accepts connections from apps. Mirrors the connector interface.
+
+```typescript
+interface TransportListener {
+  readonly schemes: TransportScheme[];
+  listen(address: TransportAddress, options: ListenOptions): Promise<ListenResult>;
+  onConnection(handler: (conn: TransportConnection) => void): void;
+  onError(handler: (error: Error) => void): void;
+  close(): Promise<void>;
+}
+```
+
+`ListenResult` includes the resolved `viewportUri` — the exact URI that apps should
+use to connect. This is important when the viewer binds to port 0 (OS-assigned) or
+when the socket path needs to be communicated to child processes.
+
+#### SelfRenderDriver
+
+For self-rendering modes (text, ansi, headless), there is no transport connection.
+Instead, the app embeds a rendering driver that handles output directly.
+
+```typescript
+interface SelfRenderDriver {
+  readonly mode: 'text' | 'ansi' | 'headless';
+  init(options: SelfRenderOptions): void;
+  processFrame(data: Uint8Array): void;
+  getTextProjection(): string;
+  destroy(): void;
+}
+```
+
+This is the "local" counterpart to `TransportConnection`. It processes the same
+protocol frames but renders them locally instead of sending them over the wire.
+
+### 10.2 Transport Registry
+
+The `TransportRegistry` maps URI schemes to connector/listener implementations.
+Both sides use it as the central entry point.
+
+```
+App startup:     VIEWPORT env var
+                    ↓
+                parseViewportUri()
+                    ↓
+                registry.connect(uri)  →  TransportConnection
+                    ↓
+                protocol encode/decode over connection
+
+Viewer startup:  ViewerConfig
+                    ↓
+                registry.listen(uri)  →  ListenResult (resolved address)
+                    ↓
+                registry.onConnection()  →  TransportConnection per app
+                    ↓
+                protocol encode/decode over connection
+```
+
+Usage:
+
+```typescript
+const registry = createDefaultRegistry();
+
+// App side
+const conn = await registry.connect('unix:///tmp/viewport.sock');
+
+// Viewer side
+const result = await registry.listen('tcp://0.0.0.0:9400');
+registry.onConnection(conn => { /* handle new app */ });
+```
+
+Adding a custom transport:
+
+```typescript
+registry.registerConnector(myCustomConnector);  // app side
+registry.registerListener(myCustomListener);    // viewer side
+```
+
+### 10.3 Built-in Transports
+
+Each transport is a self-contained module in `src/transports/`. A transport
+implements `TransportConnector` and/or `TransportListener` and registers with
+the default registry.
+
+| Module | Schemes | Connector | Listener | Notes |
+|--------|---------|-----------|----------|-------|
+| `net-socket.ts` | `unix`, `unix-abstract`, `tcp`, `tls` | yes | yes | Shared `net.Socket` implementation. TLS via Node `tls` module. Listener sets `0600` permissions on Unix sockets. |
+| `stdio.ts` | `stdio` | yes | yes | Protocol on stdin/stdout. Listener emits a single connection immediately. |
+| `fd.ts` | `fd`, `pipe` | yes | — | Wraps inherited fd in `net.Socket`. No listener — the parent (viewer) creates the fd pair. |
+| `websocket.ts` | `ws`, `wss` | stub | stub | Requires `ws` package. Each protocol frame = one WebSocket binary message (no additional framing). |
+| `in-process.ts` | any | yes | yes | Zero-copy, synchronous delivery. For testing and embeddable viewers. |
+
+**Adding a new transport** requires implementing `TransportConnector` and/or
+`TransportListener`, then registering it. The frame alignment logic (scanning for
+VP magic bytes, reading the 4-byte length) can be reused from the `FrameReader`
+class in `net-socket.ts`. WebSocket and in-process transports don't need frame
+alignment because they provide message boundaries natively.
+
+### 10.4 Frame Alignment
+
+Stream-based transports (TCP, Unix socket, stdio, fd) carry a continuous byte
+stream. Protocol frames must be extracted from this stream:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ ... bytes ... │ VP │ v │ t │ len (4B LE) │ payload │ ...
+│               │ magic  │   │             │         │
+│               └────────────┴─────────────┴─────────┘
+│                     one complete frame
+```
+
+The `FrameReader` accumulates incoming chunks and emits complete frames:
+
+1. Scan for magic bytes (`0x56 0x50` = 'VP')
+2. Read 4-byte LE payload length from header bytes 4-7
+3. Wait until `8 + length` bytes are available
+4. Emit the complete frame (header + payload)
+
+Message-based transports (WebSocket, in-process) skip this — each message is
+exactly one frame.
+
+---
+
+## 11. Viewer Configuration
+
+The viewer uses a unified configuration model that merges multiple sources.
+
+### 11.1 Configuration Schema
+
+```typescript
+interface ViewerConfig {
+  listen: string[];           // Transport URIs to listen on
+  display: {
+    width: number;            // Display width in logical pixels
+    height: number;           // Display height in logical pixels
+    pixelDensity: number;     // e.g., 2.0 for Retina
+    colorDepth: number;       // 8, 24, etc.
+  };
+  features: string[];         // Advertised in VIEWPORT_FEATURES
+  tls?: TlsOptions;           // For tls:// and wss:// listeners
+  session?: {
+    id?: string;              // Session ID (auto-generated if omitted)
+    persistent?: boolean;     // Enable reconnection
+  };
+  logLevel?: string;          // silent, error, warn, info, debug
+  maxConnections?: number;    // 0 = unlimited
+}
+```
+
+### 11.2 Configuration Sources
+
+Sources are merged in order (later overrides earlier):
+
+```
+1. Defaults          (sensible built-in values)
+2. Config file       (viewport.config.json)
+3. CLI arguments     (--listen, --width, etc.)
+```
+
+Config file search order:
+1. `$VIEWPORT_CONFIG` env var (explicit path)
+2. `./viewport.config.json` (current directory)
+3. `$XDG_CONFIG_HOME/viewport/config.json` (user config)
+
+### 11.3 CLI Arguments
+
+```
+--listen <uri>         Transport URI to listen on (repeatable)
+--width <n>            Display width
+--height <n>           Display height
+--pixel-density <n>    Pixel density
+--color-depth <n>      Color depth
+--features <list>      Comma-separated feature list
+--tls-cert <path>      TLS certificate
+--tls-key <path>       TLS private key
+--tls-ca <path>        TLS CA certificate
+--tls-insecure         Skip TLS verification
+--session <id>         Session ID
+--log-level <level>    Logging level
+--max-connections <n>  Max concurrent connections
+--config <path>        Config file path
+```
+
+### 11.4 Environment Setup for Child Processes
+
+When the viewer spawns an app, it builds the environment:
+
+```typescript
+const env = buildViewportEnv(listenResult.viewportUri, config, sessionId);
+// Sets: VIEWPORT, VIEWPORT_VERSION, VIEWPORT_FEATURES, VIEWPORT_SESSION
+```
+
+---
+
+## 12. Design Decisions
+
+### Single URI env var (VIEWPORT) instead of multiple env vars
+
+**Decision:** `VIEWPORT` is a single URI string. No separate `VIEWPORT_TRANSPORT`,
+`VIEWPORT_ADDRESS`, etc.
+
+**Rationale:** A single URI follows established patterns (`DATABASE_URL`,
+`REDIS_URL`). The scheme encodes the transport; the authority/path encode the
+address. Query parameters handle transport-specific options. One variable to set,
+one to read, one to pass to child processes.
+
+### Auto-detect ANSI mode when stdout is a TTY
+
+**Decision:** When `VIEWPORT` is unset and stdout is a TTY, the app auto-enters
+ANSI embedded renderer mode (ink-style TUI). When piped, it emits plain text.
+
+**Rationale:** This is the most user-friendly default. Running `my-app` in a
+terminal should show a TUI; piping `my-app | grep foo` should produce text. The
+output mode is queryable so apps can adapt their UI to the context (e.g., skip
+canvas in text mode, simplify layouts in ANSI mode).
+
+### Transport layer carries framed bytes, not messages
+
+**Decision:** The transport interfaces deal in `Uint8Array` (raw protocol frames),
+not decoded `ProtocolMessage` objects.
+
+**Rationale:** This keeps transports thin and independent of the protocol encoding.
+A transport doesn't need to understand CBOR, message types, or tree semantics —
+it just moves bytes. This means protocol variants (A/B/C) work over any transport
+without changes, and transport implementations stay small (< 200 lines each).
+
+### One connector/listener can handle multiple schemes
+
+**Decision:** `TransportConnector.schemes` and `TransportListener.schemes` are
+arrays, not single values.
+
+**Rationale:** Many transports share implementation. Unix domain sockets, abstract
+sockets, TCP, and TLS all use Node's `net` module with different address formats.
+Implementing them as one connector with `schemes: ['unix', 'unix-abstract', 'tcp', 'tls']`
+avoids four near-identical files. The registry maps each scheme to its handler.
+
+### Registry pattern instead of hardcoded dispatch
+
+**Decision:** Transports register with a `TransportRegistry` at startup. The
+registry resolves URI schemes to implementations.
+
+**Rationale:** New transports can be added without modifying core code — implement
+the interface, register it. The default registry (`createDefaultRegistry()`)
+includes all built-in transports. Custom registries can include additional or
+alternative transports.
+
+### Viewer config merges defaults → file → CLI
+
+**Decision:** Configuration merges in priority order: built-in defaults, then
+config file, then CLI arguments. Later sources override earlier ones.
+
+**Rationale:** Standard pattern. Defaults provide sensible behavior with zero
+configuration. Config files capture persistent preferences. CLI arguments handle
+one-off overrides. This avoids the complexity of environment variable config
+(which is already used for the `VIEWPORT` URI itself).
+
+### In-process transport for testing
+
+**Decision:** An in-process transport (`createConnectionPair()`,
+`createInProcessPair()`) provides zero-copy, synchronous delivery for tests.
+
+**Rationale:** The test harness needs to validate the full transport path
+(app → connection → viewer) without starting actual servers or opening sockets.
+The in-process transport satisfies `TransportConnection` so tests exercise the
+same code paths as production, minus the byte serialization over a socket.
