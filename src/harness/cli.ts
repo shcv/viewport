@@ -11,9 +11,7 @@
 
 import type { InputEvent } from '../core/types.js';
 import { ALL_APPS } from '../test-apps/index.js';
-import { createTreePatchBackend } from '../protocol/variants/tree-patch/index.js';
-import { createSlotGraphBackend } from '../protocol/variants/slot-graph/index.js';
-import { createOpcodeBackend } from '../protocol/variants/opcodes/index.js';
+import { createCanonicalBackend } from '../protocol/index.js';
 import { createHeadlessViewer } from '../viewer/headless/index.js';
 import { createDomViewer } from '../viewer/dom/index.js';
 import { createAnsiViewer } from '../viewer/ansi/index.js';
@@ -164,7 +162,7 @@ function main(): void {
   const apps = appNames.map((name) => ALL_APPS[name]);
 
   // Protocol backends
-  const protocols = [createTreePatchBackend(), createSlotGraphBackend(), createOpcodeBackend()];
+  const protocols = [createCanonicalBackend()];
 
   // Viewer factories
   const viewers: ViewerFactory[] = [

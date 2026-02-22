@@ -4,7 +4,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { createPage, ViewportPage } from '../../src/automation/page.js';
-import { createTreePatchBackend } from '../../src/protocol/variants/tree-patch/index.js';
+import { createCanonicalBackend } from '../../src/protocol/index.js';
 import { createHeadlessViewer } from '../../src/viewer/headless/index.js';
 import { counterApp } from '../../src/test-apps/counter.js';
 import { chatApp } from '../../src/test-apps/chat.js';
@@ -20,7 +20,7 @@ afterEach(() => {
 describe('ViewportPage', () => {
   describe('locators', () => {
     it('should find elements by text', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const loc = page.getByText('Counter');
       expect(loc.count()).toBeGreaterThan(0);
@@ -28,7 +28,7 @@ describe('ViewportPage', () => {
     });
 
     it('should find elements by ID', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const loc = page.getById(3); // DISPLAY
       expect(loc.isVisible()).toBe(true);
@@ -36,21 +36,21 @@ describe('ViewportPage', () => {
     });
 
     it('should find elements by role', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const buttons = page.getByRole('button');
       expect(buttons.count()).toBeGreaterThan(0);
     });
 
     it('should find elements by type', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const textNodes = page.getByType('text');
       expect(textNodes.count()).toBeGreaterThan(0);
     });
 
     it('should support nth() locator', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const texts = page.getByType('text');
       const first = texts.first();
@@ -60,7 +60,7 @@ describe('ViewportPage', () => {
 
   describe('actions', () => {
     it('should click elements', async () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       await page.click(7); // INC_BTN
       page.expectText('Count: 1');
@@ -70,7 +70,7 @@ describe('ViewportPage', () => {
     });
 
     it('should click via locator', async () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const incBtn = page.getById(7);
       await page.click(incBtn);
@@ -78,7 +78,7 @@ describe('ViewportPage', () => {
     });
 
     it('should press keys', async () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       await page.press('ArrowUp');
       await page.press('ArrowUp');
@@ -87,7 +87,7 @@ describe('ViewportPage', () => {
     });
 
     it('should type into inputs', async () => {
-      page = createPage(tableViewApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(tableViewApp, createCanonicalBackend(), createHeadlessViewer());
 
       await page.type(5, 'Admin'); // FILTER_INPUT
       // After typing, the table should be filtered
@@ -96,7 +96,7 @@ describe('ViewportPage', () => {
     });
 
     it('should fill inputs', async () => {
-      page = createPage(formWizardApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(formWizardApp, createCanonicalBackend(), createHeadlessViewer());
 
       await page.fill(101, 'Test User'); // S1_NAME_INPUT
       await page.fill(104, 'test@example.com'); // S1_EMAIL_INPUT
@@ -105,34 +105,34 @@ describe('ViewportPage', () => {
 
   describe('assertions', () => {
     it('should assert text presence', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       page.expectText('Counter');
       page.expectText('Count: 0');
     });
 
     it('should assert text absence', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       page.expectNoText('this should not exist');
     });
 
     it('should assert element visibility', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       page.expectVisible(page.getByText('Counter'));
       page.expectHidden(page.getByText('nonexistent text'));
     });
 
     it('should assert element count', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const buttons = page.getByRole('button');
       page.expectCount(buttons, 3); // dec, inc, reset
     });
 
     it('should throw on failed assertion', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       expect(() => page.expectText('this does not exist')).toThrow();
     });
@@ -140,7 +140,7 @@ describe('ViewportPage', () => {
 
   describe('inspection', () => {
     it('should return text content', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const text = page.textContent();
       expect(text).toContain('Counter');
@@ -148,7 +148,7 @@ describe('ViewportPage', () => {
     });
 
     it('should return render tree', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const tree = page.getTree();
       expect(tree.root).not.toBeNull();
@@ -156,7 +156,7 @@ describe('ViewportPage', () => {
     });
 
     it('should return metrics', () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const metrics = page.metrics();
       expect(metrics.messagesProcessed).toBeGreaterThan(0);
@@ -164,7 +164,7 @@ describe('ViewportPage', () => {
     });
 
     it('should produce screenshots', async () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       const screenshot = await page.screenshot();
       expect(screenshot.format).toBe('ansi');
@@ -174,7 +174,7 @@ describe('ViewportPage', () => {
 
   describe('complex workflows', () => {
     it('should support full counter workflow', async () => {
-      page = createPage(counterApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(counterApp, createCanonicalBackend(), createHeadlessViewer());
 
       // Verify initial state
       page.expectText('Count: 0');
@@ -196,7 +196,7 @@ describe('ViewportPage', () => {
     });
 
     it('should support chat send workflow', async () => {
-      page = createPage(chatApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(chatApp, createCanonicalBackend(), createHeadlessViewer());
 
       // Verify initial messages exist
       page.expectText('Welcome to the chat!');
@@ -212,7 +212,7 @@ describe('ViewportPage', () => {
     });
 
     it('should support form wizard workflow', async () => {
-      page = createPage(formWizardApp, createTreePatchBackend(), createHeadlessViewer());
+      page = createPage(formWizardApp, createCanonicalBackend(), createHeadlessViewer());
 
       // Step 1: Personal info
       page.expectText('Personal Info');

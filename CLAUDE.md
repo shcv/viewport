@@ -18,7 +18,7 @@ npm install
 npm test                                    # Run all tests
 npx tsx src/harness/cli.ts                  # Run all apps with default config
 npx tsx src/harness/cli.ts --benchmark      # Run with interaction sequences
-npx tsx src/harness/cli.ts --matrix         # Run full protocol×viewer matrix
+npx tsx src/harness/cli.ts --matrix         # Run full viewer matrix
 npx tsx src/harness/cli.ts --app counter    # Run specific app
 
 # Zig (primary standalone viewer)
@@ -50,8 +50,7 @@ src/                              TypeScript implementation
 │   ├── ansi/                     ANSI terminal viewer
 │   └── gpu/                      GPU viewer (wgpu-based)
 ├── protocol/                     Protocol encoding
-│   ├── encoding.ts               Canonical: integer-keyed CBOR opcode tuples
-│   └── variants/                 Comparison variants (tree-patch, slot-graph, opcodes)
+│   └── encoding.ts               Canonical: integer-keyed CBOR opcode tuples
 ├── transports/                   Transport implementations (unix, tcp, stdio, websocket)
 ├── harness/                      Test orchestrator, metrics, quality checks, CLI
 ├── automation/                   Playwright-style ViewportPage API
@@ -129,9 +128,6 @@ All protocol messages use **CBOR** (RFC 8949) as the payload encoding, wrapped i
 The canonical wire encoding uses `[opcode, ...args]` CBOR tuples with integer
 property keys (defined in `src/core/prop-keys.ts`). CBOR encodes small integers
 (0-23) in a single byte, making this more compact than string keys.
-
-Comparison variants (Protocol A: tree-patch, B: slot-graph, C: opcodes) are
-preserved under `src/protocol/variants/` for benchmarking.
 
 ## Design Documents
 

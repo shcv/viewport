@@ -8,7 +8,7 @@
 
 import type { AppFactory, InputEvent } from '../core/types.js';
 import { ALL_APPS } from '../test-apps/index.js';
-import { createTreePatchBackend } from '../protocol/variants/tree-patch/index.js';
+import { createCanonicalBackend } from '../protocol/index.js';
 import { createHeadlessViewer } from '../viewer/headless/index.js';
 import { ViewportPage, createPage } from '../automation/page.js';
 import { runQualityChecks } from '../harness/quality.js';
@@ -232,7 +232,7 @@ function loadApp(appName: string, width?: number, height?: number): ToolResult {
   const app = ALL_APPS[appName];
   if (!app) return error(`Unknown app: "${appName}". Available: ${Object.keys(ALL_APPS).join(', ')}`);
 
-  const protocol = createTreePatchBackend();
+  const protocol = createCanonicalBackend();
   const viewer = createHeadlessViewer();
   const page = createPage(app, protocol, viewer, { width, height });
 

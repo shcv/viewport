@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestHarness } from '../../src/harness/harness.js';
 import { runQualityChecks } from '../../src/harness/quality.js';
 import { summarizeMetrics } from '../../src/harness/metrics.js';
-import { createTreePatchBackend } from '../../src/protocol/variants/tree-patch/index.js';
+import { createCanonicalBackend } from '../../src/protocol/index.js';
 import { createHeadlessViewer } from '../../src/viewer/headless/index.js';
 import { counterApp } from '../../src/test-apps/counter.js';
 import { fileBrowserApp } from '../../src/test-apps/file-browser.js';
@@ -22,7 +22,7 @@ import { ALL_APPS } from '../../src/test-apps/index.js';
 function createHarness(app: typeof counterApp) {
   return new TestHarness({
     app,
-    protocol: createTreePatchBackend(),
+    protocol: createCanonicalBackend(),
     viewer: createHeadlessViewer(),
   });
 }

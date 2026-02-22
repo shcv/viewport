@@ -362,12 +362,12 @@ export interface RenderTree {
 // ── Backend interfaces ─────────────────────────────────────────────
 
 /**
- * A protocol backend handles serialization of protocol messages.
- * Different backends implement different wire encodings (Candidate A/B/C).
+ * A protocol backend handles serialization of protocol messages
+ * to/from the canonical integer-keyed CBOR wire format.
  */
 export interface ProtocolBackend {
   readonly name: string;
-  readonly variant: string; // 'tree-patch' | 'slot-graph' | 'opcodes'
+  readonly variant: string;
 
   /** Encode a high-level message to wire bytes. */
   encode(message: ProtocolMessage): Uint8Array;

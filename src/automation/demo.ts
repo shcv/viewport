@@ -7,7 +7,7 @@
 
 import { createPage } from './page.js';
 import { ALL_APPS } from '../test-apps/index.js';
-import { createTreePatchBackend } from '../protocol/variants/tree-patch/index.js';
+import { createCanonicalBackend } from '../protocol/index.js';
 import { createHeadlessViewer } from '../viewer/headless/index.js';
 
 function log(msg: string): void {
@@ -22,7 +22,7 @@ function header(title: string): void {
 
 async function demoCounter(): Promise<void> {
   header('Demo: Counter App');
-  const protocol = createTreePatchBackend();
+  const protocol = createCanonicalBackend();
   const viewer = createHeadlessViewer();
   const page = createPage(ALL_APPS['counter'], protocol, viewer);
 
@@ -67,7 +67,7 @@ async function demoCounter(): Promise<void> {
 
 async function demoChat(): Promise<void> {
   header('Demo: Chat App');
-  const protocol = createTreePatchBackend();
+  const protocol = createCanonicalBackend();
   const viewer = createHeadlessViewer();
   const page = createPage(ALL_APPS['chat'], protocol, viewer);
 
@@ -100,7 +100,7 @@ async function demoChat(): Promise<void> {
 
 async function demoFormWizard(): Promise<void> {
   header('Demo: Form Wizard');
-  const protocol = createTreePatchBackend();
+  const protocol = createCanonicalBackend();
   const viewer = createHeadlessViewer();
   const page = createPage(ALL_APPS['form-wizard'], protocol, viewer);
 
@@ -143,7 +143,7 @@ async function demoFormWizard(): Promise<void> {
 
 async function demoLocators(): Promise<void> {
   header('Demo: Locator API');
-  const protocol = createTreePatchBackend();
+  const protocol = createCanonicalBackend();
   const viewer = createHeadlessViewer();
   const page = createPage(ALL_APPS['counter'], protocol, viewer);
 
