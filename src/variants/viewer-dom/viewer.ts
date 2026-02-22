@@ -26,6 +26,7 @@ import {
   countNodes,
   treeDepth,
   walkTree,
+  toRowArray,
 } from '../../core/tree.js';
 import { textProjection } from '../../core/text-projection.js';
 
@@ -77,8 +78,9 @@ export class DomViewer implements ViewerBackend {
         if (!this.tree.dataRows.has(schemaSlot)) {
           this.tree.dataRows.set(schemaSlot, []);
         }
-        if (Array.isArray(msg.row)) {
-          this.tree.dataRows.get(schemaSlot)!.push(msg.row);
+        const rowArray = toRowArray(msg.row, schemaSlot, this.tree);
+        if (rowArray) {
+          this.tree.dataRows.get(schemaSlot)!.push(rowArray);
         }
         this._metrics.dataRowCount++;
         break;

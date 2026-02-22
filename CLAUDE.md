@@ -58,56 +58,33 @@ CBOR is used for compatibility with other protocol layers in the stack. The `cbo
 library handles CBOR encoding/decoding in TypeScript; native implementations use
 language-appropriate CBOR libraries.
 
-## Design Space Enumeration
+## Design Documents
 
-### Independent Design Axes
+Protocol specification, architecture, and design decisions are in `specs/`:
 
-The Viewport protocol has several design dimensions that can be varied independently:
+- **`specs/protocol.md`** — Wire format, message types, tree model, data records, patching
+- **`specs/architecture.md`** — System architecture, tiers, remote access, proxy pattern
+- **`specs/design-decisions.md`** — What's settled, what's open, rationale
 
-#### 1. Protocol Message Architecture (3 candidates)
-
-| Candidate | Description | Key Tradeoff |
-|-----------|-------------|--------------|
-| **A: Tree + Patch** | Separate tree structure and slot table. Named fields in CBOR. | Explicit, debuggable, slightly more wire overhead |
-| **B: Slot Graph** | Everything is slots. SET/DEL only. Viewer walks references from root. | Uniform, reactive, requires dependency tracking |
-| **C: Opcode Tuples** | Positional arrays with abbreviated keys. Maximally compact. | Smallest wire size (~60% of A), hardest to debug |
-
-#### 2. Data Record Format (3 candidates)
-
-| Format | Wire Size | Flexibility | Streaming |
-|--------|-----------|-------------|-----------|
-| Schema + positional arrays | Compact | Requires pre-defined schema | Good |
-| Dict records | Verbose (repeated keys) | Self-describing | Good |
-| Columnar batches (Arrow-style) | Very compact for bulk | Rigid | Poor |
-
-#### 3. Viewer Implementation
-
-| Viewer | Language | Use Case | Status |
-|--------|----------|----------|--------|
-| **Headless** | TypeScript | Testing, CI, MCP server | Complete |
-| **DOM (HTML)** | TypeScript | Visual testing, screenshot comparison | Stub |
-| **Zig Embeddable** | Zig | Native embedding, high performance | Complete |
-| **Go Embeddable** | Go | Native embedding, Go ecosystem | Complete |
-| **ANSI terminal** | — | Fallback/compatibility | Not started |
-| **Native GPU** | — | Production use (wgpu + Taffy + HarfBuzz) | Future |
-
-#### 4. Layout Engine
-
-| Engine | Language | Features |
-|--------|----------|----------|
-| Taffy | Rust (via binding) | Flexbox + Grid, ~5k lines |
-| Yoga | C++ (via binding) | Flexbox only |
-| Pure TS | TypeScript | For testing; flexbox subset |
+The original monolithic design document is preserved as `viewport-design.md`.
 
 ### Test Matrix
 
 The harness runs: **Apps × Protocols × Viewers**
 
 Current matrix:
-- 6 apps × 3 protocols × 1 viewer = 18 combinations (TypeScript)
-- With viewer-dom: 6 × 3 × 2 = 36 combinations
+- 6 apps × 3 protocols × 4 viewers = 72 combinations (TypeScript)
 
 Native viewers (Zig, Go) are tested independently via their own build/test systems.
+
+### Data Records
+
+The protocol supports two interchangeable record shapes:
+- **Schema + positional arrays** — compact, for tabular streaming data
+- **Dict records** — self-describing, for ad-hoc data
+
+Display hints (`format`, `unit`) live on `SchemaColumn` definitions. Scroll regions
+reference a schema slot via a `schema` prop to bind data for text projection.
 
 ## Embeddable Viewer Architecture
 
@@ -247,6 +224,7 @@ Variant directories are designed for independent parallel development:
 - Quality checks validate equivalence (same text projection, same tree structure)
 - Native variants can be cross-validated by comparing text projection output
 
-## Design Document
+## Design Documents
 
-See `viewport-design.md` for the full protocol design specification.
+See `specs/` for organized protocol and architecture specifications.
+The original monolithic draft is preserved as `viewport-design.md`.

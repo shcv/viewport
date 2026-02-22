@@ -5,7 +5,7 @@
 ## Overview
 
 This is the "preferred direction" from the design doc — Candidate A. It uses separate
-concepts for the definition table (styles, data bindings, templates) and the render
+concepts for the definition table (styles, data bindings, schemas) and the render
 tree (live node hierarchy addressed by node IDs).
 
 ## Wire Format

@@ -113,7 +113,7 @@ export interface NodeProps {
   virtualWidth?: number;
   scrollTop?: number;
   scrollLeft?: number;
-  template?: number; // slot ref for row template
+  schema?: number; // slot ref for data schema (display hints for data rows)
 
   // Input
   value?: string;
@@ -180,12 +180,6 @@ export interface SchemaSlot {
   columns: SchemaColumn[];
 }
 
-export interface RowTemplateSlot {
-  kind: 'row_template';
-  schema: number; // slot ref
-  layout: VNode;
-}
-
 export type SlotValue =
   | StyleSlot
   | ColorSlot
@@ -193,7 +187,6 @@ export type SlotValue =
   | TransitionSlot
   | TextSizeSlot
   | SchemaSlot
-  | RowTemplateSlot
   | { kind: string; [key: string]: unknown };
 
 // ── Schema ─────────────────────────────────────────────────────────
@@ -420,8 +413,8 @@ export interface AppConnection {
   /** Define a schema for structured data. */
   defineSchema(slot: number, columns: SchemaColumn[]): void;
 
-  /** Emit a data record. */
-  emitData(schemaSlot: number, row: unknown[]): void;
+  /** Emit a data record (positional array or dict). */
+  emitData(schemaSlot: number, row: unknown[] | Record<string, unknown>): void;
 
   /** Register input event handler. */
   onInput(handler: (event: InputEvent) => void): void;

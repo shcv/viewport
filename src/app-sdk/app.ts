@@ -76,7 +76,7 @@ export class RecordingConnection implements AppConnection {
     this.messages.push({ kind: 'schema', slot, columns });
   }
 
-  emitData(schemaSlot: number, row: unknown[]): void {
+  emitData(schemaSlot: number, row: unknown[] | Record<string, unknown>): void {
     this.messages.push({ kind: 'data', schemaSlot, row });
   }
 
@@ -110,4 +110,4 @@ export type RecordedMessage =
   | { kind: 'patch'; ops: PatchOp[] }
   | { kind: 'define'; slot: number; value: SlotValue }
   | { kind: 'schema'; slot: number; columns: SchemaColumn[] }
-  | { kind: 'data'; schemaSlot: number; row: unknown[] };
+  | { kind: 'data'; schemaSlot: number; row: unknown[] | Record<string, unknown> };

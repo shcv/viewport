@@ -38,7 +38,7 @@ const ENCODE_ABBREV: Record<string, string> = {
   decoration: 'dc', textAlign: 'ta', italic: 'it',
   value: 'v', placeholder: 'ph', multiline: 'ml', disabled: 'di',
   virtualHeight: 'vH', virtualWidth: 'vW', scrollTop: 'sT',
-  scrollLeft: 'sL', template: 'tp', interactive: 'ia',
+  scrollLeft: 'sL', schema: 'sc', interactive: 'ia',
   tabIndex: 'ti', style: 's', transition: 'tr',
   altText: 'at', mode: 'mo', format: 'fm', data: 'dt',
   textAlt: 'tA', kind: 'k',

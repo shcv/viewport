@@ -63,7 +63,7 @@ The `FrameReader` handles streaming with buffering, supporting partial reads.
 Matching the TypeScript implementation:
 - `text` → content string
 - `box` → children joined by `\n` (column) or `\t` (row)
-- `scroll` → children content (+ data rows from template if present)
+- `scroll` → children content (+ data rows from schema if present)
 - `input` → value or placeholder
 - `image`/`canvas` → altText or `[image]`
 - `separator` → `────────────────`

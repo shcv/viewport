@@ -37,7 +37,7 @@ export const APP_NAMES = Object.keys(ALL_APPS);
  * What each test app exercises (for test matrix planning):
  *
  * counter:       basic tree, patches, click handling, keyboard input
- * file-browser:  schema, data records, row templates, scroll, virtualization, sorting
+ * file-browser:  schema, data records, schema display hints, scroll, virtualization, sorting
  * dashboard:     complex flexbox, multiple panels, real-time patching, canvas alt-text
  * table-view:    input field, large tree updates, sorting, filtering, schema+data
  * form-wizard:   input fields, focus, conditional rendering, multi-step state, validation

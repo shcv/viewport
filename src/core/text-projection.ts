@@ -70,17 +70,14 @@ export function projectNode(
         .map((c) => projectNode(c, tree, options, depth + 1))
         .filter((t) => t.length > 0);
 
-      // If the scroll has a template and data rows, project those too
-      if (node.props.template !== undefined) {
-        const templateSlot = tree.slots.get(node.props.template as number);
-        if (templateSlot && templateSlot.kind === 'row_template') {
-          const schemaSlot = (templateSlot as { schema: number }).schema;
-          const rows = tree.dataRows.get(schemaSlot);
-          const schema = tree.schemas.get(schemaSlot);
-          if (rows && schema) {
-            const dataText = projectDataRows(rows, schema);
-            if (dataText) childTexts.push(dataText);
-          }
+      // If the scroll has a schema ref and data rows, project those too
+      if (node.props.schema !== undefined) {
+        const schemaSlot = node.props.schema as number;
+        const rows = tree.dataRows.get(schemaSlot);
+        const schema = tree.schemas.get(schemaSlot);
+        if (rows && schema) {
+          const dataText = projectDataRows(rows, schema);
+          if (dataText) childTexts.push(dataText);
         }
       }
 
