@@ -45,15 +45,18 @@ src/
 
 ## Wire Format
 
-All protocol messages use **CBOR** (RFC 8949) as the payload encoding, wrapped in an
-8-byte binary frame header:
+All protocol messages use **CBOR** (RFC 8949) as the payload encoding, wrapped in a
+24-byte binary frame header:
 
 ```
-┌─────────┬─────────┬────────┬─────────────┬──────────────────┐
-│ magic   │ version │ type   │ length      │ CBOR payload     │
-│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ variable         │
-└─────────┴─────────┴────────┴─────────────┴──────────────────┘
+┌─────────┬─────────┬────────┬─────────────┬──────────────┬──────────────┬──────────────────┐
+│ magic   │ version │ type   │ length      │ session      │ seq          │ CBOR payload     │
+│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ 8 bytes LE   │ 8 bytes LE   │ variable         │
+└─────────┴─────────┴────────┴─────────────┴──────────────┴──────────────┴──────────────────┘
 ```
+
+Session ID is a 64-bit identifier (48-bit epoch seconds + 16-bit random) created by
+the source at connection time. Sequence number is a 64-bit monotonic counter per session.
 
 CBOR is used for compatibility with other protocol layers in the stack. The `cborg`
 library handles CBOR encoding/decoding in TypeScript; native implementations use
@@ -201,7 +204,7 @@ implementation instructions. To add a new variant:
 Native viewer variants implement the `EmbeddableViewer` pattern in their respective
 languages. They include:
 
-- Same wire format (8-byte header + CBOR payload)
+- Same wire format (24-byte header + CBOR payload)
 - Same tree operations (set tree, apply patches, walk, find)
 - Same text projection rules
 - Own build systems (`build.zig`, `go.mod`)

@@ -21,7 +21,7 @@ import type { TransportScheme, TransportAddress, ParsedViewportUri } from './tra
 /**
  * A live bidirectional connection between an app and a viewer.
  *
- * Messages are protocol frames (8-byte header + CBOR payload). The transport
+ * Messages are protocol frames (24-byte header + CBOR payload). The transport
  * handles framing over the underlying byte stream — callers send/receive
  * complete frames.
  */

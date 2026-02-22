@@ -268,18 +268,22 @@ describe('NetSocketTransport (real TCP)', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(viewerConns).toHaveLength(1);
 
-    // Build a valid protocol frame (magic + version + type + length + payload)
+    // Build a valid protocol frame (24-byte header + payload)
+    // Header: magic(2) + version(1) + type(1) + length(4 LE) + session(8 LE) + seq(8 LE)
     const payload = new Uint8Array([0x42]);
-    const frame = new Uint8Array(9);
+    const frame = new Uint8Array(25); // 24-byte header + 1-byte payload
     frame[0] = 0x56; // V
     frame[1] = 0x50; // P
-    frame[2] = 0x01; // version
+    frame[2] = 0x02; // version (v2)
     frame[3] = 0x02; // type (TREE)
     frame[4] = 0x01; // length LE (1 byte)
     frame[5] = 0x00;
     frame[6] = 0x00;
     frame[7] = 0x00;
-    frame[8] = 0x42; // payload
+    // bytes 8-15: session ID (0 = SESSION_NONE)
+    // bytes 16-23: sequence number (0)
+    // (already zero from Uint8Array constructor)
+    frame[24] = 0x42; // payload
 
     // App → Viewer
     const viewerReceived: Uint8Array[] = [];

@@ -11,10 +11,15 @@ This document records design decisions, their rationale, and current status.
 
 These decisions are considered stable.
 
-### Wire format: CBOR with 8-byte binary frame header
+### Wire format: CBOR with 24-byte binary frame header
 
-**Decision:** CBOR (RFC 8949) as the payload encoding, with a fixed 8-byte binary
-frame header for fast dispatch.
+**Decision:** CBOR (RFC 8949) as the payload encoding, with a fixed 24-byte binary
+frame header for fast dispatch, session identification, and message ordering.
+
+**Header layout (v2):**
+```
+magic(2) + version(1) + type(1) + length(4 LE) + session(8 LE) + seq(8 LE) = 24 bytes
+```
 
 **Rationale:** CBOR is compact, self-describing, has libraries in every language, and
 handles integer-keyed maps naturally (useful for compact wire representation). The frame
@@ -22,9 +27,37 @@ header enables dispatch without deserializing the payload. Zero-copy formats (Ca
 FlatBuffers) were rejected because data crosses trust boundaries and messages are small
 enough that verification cost dominates anyway.
 
+The header was expanded from 8 to 24 bytes in v2 to add session ID and sequence number
+fields. Bytes 0-7 are identical to v1, keeping magic and length at the same offsets for
+backward-compatible frame scanning.
+
 **Note:** The original design document referenced msgpack. CBOR was chosen during
 implementation for its RFC standardization and better integer-key support. All
 implementations use CBOR.
+
+### Session framing: 64-bit session ID + 64-bit sequence number
+
+**Decision:** Every frame carries a session ID (created by the source at connection time)
+and a monotonic sequence number (incremented per state-mutating message within a session).
+Inspired by BSPL's session-based interaction model.
+
+**Session ID format:** 48-bit epoch seconds (upper) + 16-bit random (lower). This is a
+compact ULID-equivalent: unique enough to distinguish concurrent sessions on a single
+viewer (which typically has only a handful of sources), while fitting in 8 bytes.
+
+**Sequence number:** 64-bit monotonic counter within a session. Only the source increments
+it (for now — multiagent view manipulation could change this). Allows the viewer to
+discard superseded updates that arrive late (e.g., out-of-order delivery over unreliable
+transports or through proxies).
+
+**Rationale:**
+- A viewer may have multiple sources connected simultaneously. The session ID lets it
+  distinguish interleaved messages without additional framing or multiplexing.
+- The sequence number enables idempotent delivery and late-arrival discard. If a viewer
+  receives seq=5 after already processing seq=7 for the same session, it can safely drop it.
+- Keeping session+seq in the fixed header (not in the CBOR payload) means the transport
+  layer can inspect them without deserializing the payload — useful for proxies, routers,
+  and debugging tools.
 
 ### Protocol structure: Tree + Patch with definition table
 

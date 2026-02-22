@@ -30,10 +30,12 @@ import type { TransportScheme, TransportAddress } from '../core/transport.js';
 /**
  * Accumulates bytes from a stream and emits complete protocol frames.
  *
- * Protocol frames: 2-byte magic + 1-byte version + 1-byte type + 4-byte LE length + payload.
- * Total header: 8 bytes.
+ * Protocol frames: 2-byte magic + 1-byte version + 1-byte type + 4-byte LE length
+ *   + 8-byte session + 8-byte seq + payload.
+ * Total header: 24 bytes.
  */
 class FrameReader {
+  private static readonly HEADER_SIZE = 24;
   private buffer: Buffer = Buffer.alloc(0);
   private handler: ((frame: Uint8Array) => void) | null = null;
 
@@ -47,7 +49,7 @@ class FrameReader {
   }
 
   private drain(): void {
-    while (this.buffer.length >= 8) {
+    while (this.buffer.length >= FrameReader.HEADER_SIZE) {
       // Read header
       const magic = (this.buffer[0] << 8) | this.buffer[1];
       if (magic !== MAGIC) {
@@ -57,7 +59,7 @@ class FrameReader {
       }
 
       const payloadLength = this.buffer.readUInt32LE(4);
-      const frameLength = 8 + payloadLength;
+      const frameLength = FrameReader.HEADER_SIZE + payloadLength;
 
       if (this.buffer.length < frameLength) {
         break; // incomplete frame, wait for more data

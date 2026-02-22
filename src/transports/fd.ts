@@ -21,6 +21,7 @@ import type { TransportScheme, TransportAddress } from '../core/transport.js';
 // ── Frame Reader ─────────────────────────────────────────────────
 
 class FrameReader {
+  private static readonly HEADER_SIZE = 24;
   private buffer: Buffer = Buffer.alloc(0);
   private handler: ((frame: Uint8Array) => void) | null = null;
 
@@ -34,14 +35,14 @@ class FrameReader {
   }
 
   private drain(): void {
-    while (this.buffer.length >= 8) {
+    while (this.buffer.length >= FrameReader.HEADER_SIZE) {
       const magic = (this.buffer[0] << 8) | this.buffer[1];
       if (magic !== MAGIC) {
         this.buffer = this.buffer.subarray(1);
         continue;
       }
       const payloadLength = this.buffer.readUInt32LE(4);
-      const frameLength = 8 + payloadLength;
+      const frameLength = FrameReader.HEADER_SIZE + payloadLength;
       if (this.buffer.length < frameLength) break;
       const frame = new Uint8Array(this.buffer.subarray(0, frameLength));
       this.buffer = this.buffer.subarray(frameLength);
