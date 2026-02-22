@@ -398,6 +398,11 @@ export interface ViewerMetrics {
   frameTimesMs: number[]; // last N frame times for percentile analysis
 }
 
+// ── Output mode (how the app is rendering) ────────────────────────
+
+import type { OutputMode } from './transport.js';
+export type { OutputMode } from './transport.js';
+
 // ── Test app factory ───────────────────────────────────────────────
 
 export interface AppConnection {
@@ -425,6 +430,12 @@ export interface AppConnection {
   /** Current viewport dimensions. */
   readonly width: number;
   readonly height: number;
+
+  /**
+   * The resolved output mode. Apps use this to adapt their UI to the
+   * output context (text, ansi, viewer, headless).
+   */
+  readonly outputMode: OutputMode;
 }
 
 export interface AppFactory {

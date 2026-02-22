@@ -197,6 +197,7 @@ export class TestHarness {
     return {
       get width() { return self._width; },
       get height() { return self._height; },
+      outputMode: { type: 'headless' as const },
 
       setTree(root: VNode): void {
         self.pipeToViewer({ type: MessageType.TREE, root });

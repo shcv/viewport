@@ -10,6 +10,7 @@ import type {
   AppInstance,
   AppConnection,
   InputEvent,
+  OutputMode,
   VNode,
   PatchOp,
   SlotValue,
@@ -51,9 +52,13 @@ export class RecordingConnection implements AppConnection {
   /** The last tree set by the app. */
   lastTree: VNode | null = null;
 
-  constructor(width = 800, height = 600) {
+  /** The output mode for this connection. */
+  readonly outputMode: OutputMode;
+
+  constructor(width = 800, height = 600, outputMode?: OutputMode) {
     this._width = width;
     this._height = height;
+    this.outputMode = outputMode ?? { type: 'headless' };
   }
 
   get width(): number { return this._width; }

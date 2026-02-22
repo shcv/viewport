@@ -5,3 +5,18 @@ export {
   clickable, row, column, heading, label, muted,
   resetIdCounter,
 } from './components.js';
+export {
+  resolveOutputMode,
+  parseViewportUri,
+  isInteractive,
+  isRichRendering,
+  describeOutputMode,
+  ViewportUriError,
+} from '../core/transport.js';
+export type {
+  OutputMode,
+  TransportScheme,
+  TransportInfo,
+  TransportAddress,
+  ParsedViewportUri,
+} from '../core/transport.js';
