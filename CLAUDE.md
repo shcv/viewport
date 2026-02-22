@@ -28,6 +28,7 @@ npx tsx src/harness/cli.ts --json           # JSON output
 src/
 ├── core/                      Shared types, wire format, tree utilities, text projection
 ├── app-sdk/                   Standard API that test apps code against
+├── transports/                Modular transport implementations (unix, tcp, stdio, etc.)
 ├── test-apps/                 6 classic TUI test applications
 ├── harness/                   Test orchestrator, metrics, quality checks, CLI
 ├── automation/                Playwright-style ViewportPage API
@@ -44,15 +45,18 @@ src/
 
 ## Wire Format
 
-All protocol messages use **CBOR** (RFC 8949) as the payload encoding, wrapped in an
-8-byte binary frame header:
+All protocol messages use **CBOR** (RFC 8949) as the payload encoding, wrapped in a
+24-byte binary frame header:
 
 ```
-┌─────────┬─────────┬────────┬─────────────┬──────────────────┐
-│ magic   │ version │ type   │ length      │ CBOR payload     │
-│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ variable         │
-└─────────┴─────────┴────────┴─────────────┴──────────────────┘
+┌─────────┬─────────┬────────┬─────────────┬──────────────┬──────────────┬──────────────────┐
+│ magic   │ version │ type   │ length      │ session      │ seq          │ CBOR payload     │
+│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ 8 bytes LE   │ 8 bytes LE   │ variable         │
+└─────────┴─────────┴────────┴─────────────┴──────────────┴──────────────┴──────────────────┘
 ```
+
+Session ID is a 64-bit identifier (48-bit epoch seconds + 16-bit random) created by
+the source at connection time. Sequence number is a 64-bit monotonic counter per session.
 
 CBOR is used for compatibility with other protocol layers in the stack. The `cborg`
 library handles CBOR encoding/decoding in TypeScript; native implementations use
@@ -64,6 +68,7 @@ Protocol specification, architecture, and design decisions are in `specs/`:
 
 - **`specs/protocol.md`** — Wire format, message types, tree model, data records, patching
 - **`specs/architecture.md`** — System architecture, tiers, remote access, proxy pattern
+- **`specs/transport.md`** — VIEWPORT URI, transport interfaces, registry, viewer config
 - **`specs/design-decisions.md`** — What's settled, what's open, rationale
 
 The original monolithic design document is preserved as `viewport-design.md`.
@@ -199,7 +204,7 @@ implementation instructions. To add a new variant:
 Native viewer variants implement the `EmbeddableViewer` pattern in their respective
 languages. They include:
 
-- Same wire format (8-byte header + CBOR payload)
+- Same wire format (24-byte header + CBOR payload)
 - Same tree operations (set tree, apply patches, walk, find)
 - Same text projection rules
 - Own build systems (`build.zig`, `go.mod`)
@@ -228,3 +233,13 @@ Variant directories are designed for independent parallel development:
 
 See `specs/` for organized protocol and architecture specifications.
 The original monolithic draft is preserved as `viewport-design.md`.
+
+**Important:** All confirmed design decisions must be recorded in the appropriate
+spec file under `specs/`. Each decision should include the choice made, the
+rationale, and any rejected alternatives. This ensures the specs remain the
+authoritative source of truth for the project's design.
+
+- Protocol/wire format decisions → `specs/protocol.md`
+- Architecture/system structure decisions → `specs/architecture.md`
+- Transport/connection/config decisions → `specs/transport.md`
+- Cross-cutting or general decisions → `specs/design-decisions.md`

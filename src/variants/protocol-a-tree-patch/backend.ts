@@ -6,7 +6,7 @@
  *   - Definition table (reusable styles, data bindings, schemas) → DEFINE messages
  *   - Render tree (live node hierarchy) → TREE/PATCH messages
  *
- * Wire format: 8-byte header + CBOR payload with named fields.
+ * Wire format: 24-byte header + CBOR payload with named fields.
  */
 
 import { encode, decode } from 'cborg';
@@ -15,8 +15,9 @@ import type {
   ProtocolMessage,
   FrameHeader,
   MessageType,
+  SessionId,
 } from '../../core/types.js';
-import { MessageType as MT } from '../../core/types.js';
+import { MessageType as MT, SESSION_NONE } from '../../core/types.js';
 import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../core/wire.js';
 
 export class TreePatchBackend implements ProtocolBackend {
@@ -34,9 +35,9 @@ export class TreePatchBackend implements ProtocolBackend {
     return this.payloadToMessage(payload);
   }
 
-  encodeFrame(message: ProtocolMessage): Uint8Array {
+  encodeFrame(message: ProtocolMessage, session: SessionId = SESSION_NONE, seq: bigint = 0n): Uint8Array {
     const payload = this.encode(message);
-    const header = encodeHeader(message.type, payload.length);
+    const header = encodeHeader(message.type, payload.length, session, seq);
     const frame = new Uint8Array(HEADER_SIZE + payload.length);
     frame.set(header, 0);
     frame.set(payload, HEADER_SIZE);

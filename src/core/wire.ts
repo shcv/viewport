@@ -1,21 +1,39 @@
 /**
- * Wire format: 8-byte binary frame header + CBOR payload.
+ * Wire format: 24-byte binary frame header + CBOR payload.
  *
- * ┌─────────┬─────────┬────────┬─────────────┬──────────────────┐
- * │ magic   │ version │ type   │ length      │ CBOR payload     │
- * │ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ variable         │
- * └─────────┴─────────┴────────┴─────────────┴──────────────────┘
+ * ┌─────────┬─────────┬────────┬─────────────┬──────────────┬──────────────┬──────────────────┐
+ * │ magic   │ version │ type   │ length      │ session      │ seq          │ CBOR payload     │
+ * │ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ 8 bytes LE   │ 8 bytes LE   │ variable         │
+ * └─────────┴─────────┴────────┴─────────────┴──────────────┴──────────────┴──────────────────┘
  *
- * CBOR (RFC 8949) is used instead of msgpack for compatibility with
- * other protocol layers in the stack.
+ * Bytes 0-7 are identical to protocol v1, keeping magic and length at the
+ * same offsets. Session and seq are appended at bytes 8-23.
+ *
+ * - session: 64-bit session ID (48-bit epoch seconds + 16-bit random),
+ *   created by the source at connection time. Allows a viewer to
+ *   distinguish interleaved messages from multiple sources.
+ *
+ * - seq: 64-bit monotonic counter within a session. Incremented by
+ *   the sender for each state-mutating message, allowing the viewer
+ *   to discard superseded updates that arrive late.
+ *
+ * CBOR (RFC 8949) is used as the payload encoding.
  */
 
-import { MAGIC, PROTOCOL_VERSION, type FrameHeader, type MessageType } from './types.js';
+import {
+  MAGIC, PROTOCOL_VERSION, SESSION_NONE,
+  type FrameHeader, type MessageType, type SessionId,
+} from './types.js';
 
-export const HEADER_SIZE = 8;
+export const HEADER_SIZE = 24;
 
 /** Encode a frame header into a buffer. */
-export function encodeHeader(type: MessageType, payloadLength: number): Uint8Array {
+export function encodeHeader(
+  type: MessageType,
+  payloadLength: number,
+  session: SessionId = SESSION_NONE,
+  seq: bigint = 0n,
+): Uint8Array {
   const buf = new Uint8Array(HEADER_SIZE);
   const view = new DataView(buf.buffer);
 
@@ -27,6 +45,10 @@ export function encodeHeader(type: MessageType, payloadLength: number): Uint8Arr
   view.setUint8(3, type);
   // Payload length (little-endian u32)
   view.setUint32(4, payloadLength, true);
+  // Session ID (little-endian u64)
+  view.setBigUint64(8, session, true);
+  // Sequence number (little-endian u64)
+  view.setBigUint64(16, seq, true);
 
   return buf;
 }
@@ -45,12 +67,19 @@ export function decodeHeader(data: Uint8Array): FrameHeader | null {
     version: view.getUint8(2),
     type: view.getUint8(3) as MessageType,
     length: view.getUint32(4, true),
+    session: view.getBigUint64(8, true),
+    seq: view.getBigUint64(16, true),
   };
 }
 
 /** Combine a header and payload into a complete frame. */
-export function encodeFrame(type: MessageType, payload: Uint8Array): Uint8Array {
-  const header = encodeHeader(type, payload.length);
+export function encodeFrame(
+  type: MessageType,
+  payload: Uint8Array,
+  session: SessionId = SESSION_NONE,
+  seq: bigint = 0n,
+): Uint8Array {
+  const header = encodeHeader(type, payload.length, session, seq);
   const frame = new Uint8Array(HEADER_SIZE + payload.length);
   frame.set(header, 0);
   frame.set(payload, HEADER_SIZE);

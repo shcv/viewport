@@ -1,6 +1,6 @@
 # Viewport Protocol Specification
 
-**Status:** Draft v0.2
+**Status:** Draft v0.3
 **Date:** February 2026
 
 ---
@@ -9,21 +9,50 @@
 
 ### 1.1 Framing
 
-Every message uses a fixed 8-byte binary header followed by a CBOR payload:
+Every message uses a fixed 24-byte binary header followed by a CBOR payload:
 
 ```
-┌─────────┬─────────┬────────┬─────────────┬──────────────────┐
-│ magic   │ version │ type   │ length      │ CBOR payload     │
-│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ variable         │
-└─────────┴─────────┴────────┴─────────────┴──────────────────┘
+┌─────────┬─────────┬────────┬─────────────┬──────────────┬──────────────┬──────────────────┐
+│ magic   │ version │ type   │ length      │ session      │ seq          │ CBOR payload     │
+│ 2 bytes │ 1 byte  │ 1 byte │ 4 bytes LE  │ 8 bytes LE   │ 8 bytes LE   │ variable         │
+└─────────┴─────────┴────────┴─────────────┴──────────────┴──────────────┴──────────────────┘
 ```
 
 - **Magic bytes:** `0x5650` (ASCII 'VP'). Detects accidental raw text on the protocol
   channel. Also serves as the delimiter when Tier 1 programs embed structured frames
   in PTY output.
-- **Version:** Protocol version (currently `1`).
+- **Version:** Protocol version (currently `2`).
 - **Type byte:** Message type for fast dispatch without deserializing the payload.
 - **Length:** Payload size in bytes (little-endian u32, max ~4GB per message).
+- **Session:** 64-bit session ID (little-endian). See §1.3.
+- **Seq:** 64-bit sequence number (little-endian). See §1.3.
+
+Bytes 0–7 are identical to protocol v1, keeping magic and length at the same
+offsets for backward-compatible frame scanning. Session and seq are appended at
+bytes 8–23.
+
+### 1.3 Session Framing
+
+Every frame carries a **session ID** and a **sequence number** in the fixed header.
+
+**Session ID** (8 bytes, LE u64): Created by the source (app) at connection time.
+Format: 48-bit epoch seconds (upper bits) + 16-bit random (lower bits). This is a
+compact ULID-equivalent that uniquely identifies a source's connection to a viewer.
+
+- A viewer with multiple connected sources uses the session ID to distinguish
+  interleaved messages without additional multiplexing.
+- Session ID `0` (`SESSION_NONE`) is reserved for messages where session context
+  is not applicable.
+
+**Sequence number** (8 bytes, LE u64): Monotonically increasing counter within a
+session. Incremented by the sender for each state-mutating message.
+
+- Allows the viewer to discard superseded updates that arrive late (e.g., if seq=5
+  arrives after seq=7 has already been processed for the same session, it can be
+  safely dropped).
+- Enables idempotent delivery through proxies and unreliable transports.
+- Currently only the source increments seq (the viewer's INPUT messages back to the
+  app use the viewer's own session/seq).
 
 ### 1.2 Payload Encoding: CBOR
 

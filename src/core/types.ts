@@ -9,7 +9,7 @@
 // ── Wire format constants ──────────────────────────────────────────
 
 export const MAGIC = 0x5650; // ASCII 'VP'
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export enum MessageType {
   DEFINE = 0x01,
@@ -28,8 +28,40 @@ export interface FrameHeader {
   magic: number;
   version: number;
   type: MessageType;
-  length: number; // payload size in bytes (LE u32)
+  length: number;     // payload size in bytes (LE u32)
+  session: bigint;    // session ID (48-bit epoch seconds + 16-bit random)
+  seq: bigint;        // monotonic sequence number within session
 }
+
+// ── Session ID ────────────────────────────────────────────────────
+
+/**
+ * A 64-bit session identifier created by the source (app) at connection time.
+ *
+ * Format: 48-bit seconds since epoch (upper) + 16-bit random (lower).
+ * This is compact enough for the frame header while being unique enough
+ * to distinguish concurrent sessions on a single viewer. One viewer
+ * typically has only a handful of sources, so 16 bits of randomness
+ * is more than sufficient.
+ *
+ * Stored as a bigint for 64-bit precision in JavaScript.
+ */
+export type SessionId = bigint;
+
+/** Generate a new session ID: 48-bit epoch seconds + 16-bit random. */
+export function generateSessionId(): SessionId {
+  const epochSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const random = BigInt(Math.floor(Math.random() * 0x10000));
+  return (epochSeconds << 16n) | random;
+}
+
+/** Extract the epoch seconds from a session ID. */
+export function sessionEpochSeconds(session: SessionId): number {
+  return Number(session >> 16n);
+}
+
+/** The zero session ID — used for messages where session is not applicable. */
+export const SESSION_NONE: SessionId = 0n;
 
 // ── Node types ─────────────────────────────────────────────────────
 
@@ -336,7 +368,7 @@ export interface ProtocolBackend {
   decode(data: Uint8Array): ProtocolMessage;
 
   /** Encode with frame header for the full wire format. */
-  encodeFrame(message: ProtocolMessage): Uint8Array;
+  encodeFrame(message: ProtocolMessage, session?: SessionId, seq?: bigint): Uint8Array;
 
   /** Decode a complete frame (header + payload). */
   decodeFrame(data: Uint8Array): { header: FrameHeader; message: ProtocolMessage };
@@ -398,6 +430,11 @@ export interface ViewerMetrics {
   frameTimesMs: number[]; // last N frame times for percentile analysis
 }
 
+// ── Output mode (how the app is rendering) ────────────────────────
+
+import type { OutputMode } from './transport.js';
+export type { OutputMode } from './transport.js';
+
 // ── Test app factory ───────────────────────────────────────────────
 
 export interface AppConnection {
@@ -425,6 +462,12 @@ export interface AppConnection {
   /** Current viewport dimensions. */
   readonly width: number;
   readonly height: number;
+
+  /**
+   * The resolved output mode. Apps use this to adapt their UI to the
+   * output context (text, ansi, viewer, headless).
+   */
+  readonly outputMode: OutputMode;
 }
 
 export interface AppFactory {

@@ -12,8 +12,9 @@ import type {
   FrameHeader,
   VNode,
   PatchOp,
+  SessionId,
 } from '../../core/types.js';
-import { MessageType } from '../../core/types.js';
+import { MessageType, SESSION_NONE } from '../../core/types.js';
 import { encodeHeader, decodeHeader, HEADER_SIZE } from '../../core/wire.js';
 
 // Opcodes
@@ -73,9 +74,9 @@ export class OpcodeBackend implements ProtocolBackend {
     return this.tupleToMessage(tuple);
   }
 
-  encodeFrame(message: ProtocolMessage): Uint8Array {
+  encodeFrame(message: ProtocolMessage, session: SessionId = SESSION_NONE, seq: bigint = 0n): Uint8Array {
     const payload = this.encode(message);
-    const header = encodeHeader(message.type, payload.length);
+    const header = encodeHeader(message.type, payload.length, session, seq);
     const frame = new Uint8Array(HEADER_SIZE + payload.length);
     frame.set(header, 0);
     frame.set(payload, HEADER_SIZE);
