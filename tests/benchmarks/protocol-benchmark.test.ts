@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTreePatchBackend } from '../../src/variants/protocol-a-tree-patch/index.js';
-import { createSlotGraphBackend } from '../../src/variants/protocol-b-slot-graph/index.js';
-import { createOpcodeBackend } from '../../src/variants/protocol-c-opcodes/index.js';
+import { createTreePatchBackend } from '../../src/protocol/variants/tree-patch/index.js';
+import { createSlotGraphBackend } from '../../src/protocol/variants/slot-graph/index.js';
+import { createOpcodeBackend } from '../../src/protocol/variants/opcodes/index.js';
 import { MessageType, type ProtocolMessage, type ProtocolBackend, type VNode } from '../../src/core/types.js';
 
 /** Build a tree of N nodes (balanced binary tree). */

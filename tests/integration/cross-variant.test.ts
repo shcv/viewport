@@ -8,10 +8,11 @@
 import { describe, it, expect } from 'vitest';
 import { TestHarness } from '../../src/harness/harness.js';
 import { compareTextProjections, compareTreeStructures } from '../../src/harness/quality.js';
-import { createTreePatchBackend } from '../../src/variants/protocol-a-tree-patch/index.js';
-import { createSlotGraphBackend } from '../../src/variants/protocol-b-slot-graph/index.js';
-import { createOpcodeBackend } from '../../src/variants/protocol-c-opcodes/index.js';
-import { createHeadlessViewer } from '../../src/variants/viewer-headless/index.js';
+import { createTreePatchBackend } from '../../src/protocol/variants/tree-patch/index.js';
+import { createSlotGraphBackend } from '../../src/protocol/variants/slot-graph/index.js';
+import { createOpcodeBackend } from '../../src/protocol/variants/opcodes/index.js';
+import { createCanonicalBackend } from '../../src/protocol/encoding.js';
+import { createHeadlessViewer } from '../../src/viewer/headless/index.js';
 import { ALL_APPS } from '../../src/test-apps/index.js';
 import type { ProtocolBackend } from '../../src/core/types.js';
 
@@ -23,11 +24,12 @@ function createHarness(app: typeof ALL_APPS[string], protocol: ProtocolBackend) 
   });
 }
 
-describe('Cross-variant: Protocol A vs B vs C', () => {
+describe('Cross-variant: Protocol A vs B vs C vs Canonical', () => {
   const backends = [
     { name: 'Protocol A', create: createTreePatchBackend },
     { name: 'Protocol B', create: createSlotGraphBackend },
     { name: 'Protocol C', create: createOpcodeBackend },
+    { name: 'Canonical', create: createCanonicalBackend },
   ];
 
   for (const [appName, app] of Object.entries(ALL_APPS)) {
@@ -77,24 +79,24 @@ describe('Cross-variant: Protocol A vs B vs C', () => {
         harnessC.stop();
       });
 
-      it('Protocol A and C should produce matching text projections', () => {
+      it('Protocol A and Canonical should produce matching text projections', () => {
         const harnessA = createHarness(app, createTreePatchBackend());
-        const harnessC = createHarness(app, createOpcodeBackend());
+        const harnessCanonical = createHarness(app, createCanonicalBackend());
 
         harnessA.start();
-        harnessC.start();
+        harnessCanonical.start();
 
         const check = compareTextProjections(
           harnessA.getTree(),
-          harnessC.getTree(),
+          harnessCanonical.getTree(),
           'Protocol A',
-          'Protocol C',
+          'Canonical',
         );
 
         expect(check.passed, `Text projections differ for ${appName}: ${check.message}`).toBe(true);
 
         harnessA.stop();
-        harnessC.stop();
+        harnessCanonical.stop();
       });
     });
   }

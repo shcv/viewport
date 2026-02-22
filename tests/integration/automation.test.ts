@@ -4,8 +4,8 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { createPage, ViewportPage } from '../../src/automation/page.js';
-import { createTreePatchBackend } from '../../src/variants/protocol-a-tree-patch/index.js';
-import { createHeadlessViewer } from '../../src/variants/viewer-headless/index.js';
+import { createTreePatchBackend } from '../../src/protocol/variants/tree-patch/index.js';
+import { createHeadlessViewer } from '../../src/viewer/headless/index.js';
 import { counterApp } from '../../src/test-apps/counter.js';
 import { chatApp } from '../../src/test-apps/chat.js';
 import { formWizardApp } from '../../src/test-apps/form-wizard.js';
