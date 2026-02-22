@@ -53,11 +53,34 @@ transports or through proxies).
 **Rationale:**
 - A viewer may have multiple sources connected simultaneously. The session ID lets it
   distinguish interleaved messages without additional framing or multiplexing.
-- The sequence number enables idempotent delivery and late-arrival discard. If a viewer
-  receives seq=5 after already processing seq=7 for the same session, it can safely drop it.
+- The sequence number enables idempotent delivery and late-arrival discard.
 - Keeping session+seq in the fixed header (not in the CBOR payload) means the transport
   layer can inspect them without deserializing the payload — useful for proxies, routers,
   and debugging tools.
+
+### Per-node and per-slot version tracking
+
+**Decision:** Staleness is checked per-node and per-slot, not per-frame. Multiple updates
+within a single frame may share the same seq number, but the viewer tracks the last-seen
+seq independently for each node ID, slot ID, schema slot, and data stream.
+
+When a late-arriving message is processed, the viewer checks the version of each
+individual target (node, slot, schema, data stream). If the target's recorded version
+is already newer than the incoming seq, that specific update is skipped — but other
+updates in the same message that target different (older-versioned) entities are still
+applied.
+
+**Rationale:**
+- A frame's updates may target a mix of nodes and slots. Two frames at seq=5 and seq=7
+  may update disjoint sets of nodes. Dropping the entire seq=5 frame would lose updates
+  to nodes that seq=7 never touched.
+- Per-node versioning is the correct granularity because the protocol's patch operations
+  already target individual nodes by ID. The version check naturally aligns with the
+  patch target.
+- Slots, schemas, and data streams are each independently keyed (by slot number), so
+  they get their own version maps following the same principle.
+- This is strictly more correct than frame-level discard, with negligible overhead (one
+  bigint comparison per patch op or slot update).
 
 ### Protocol structure: Tree + Patch with definition table
 

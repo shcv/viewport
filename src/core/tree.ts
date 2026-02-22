@@ -15,18 +15,22 @@ export function createRenderTree(): RenderTree {
     schemas: new Map(),
     dataRows: new Map(),
     nodeIndex: new Map(),
+    slotVersions: new Map(),
+    schemaVersions: new Map(),
+    dataVersions: new Map(),
   };
 }
 
 /** Convert a VNode to a RenderNode and index all nodes. */
-export function vnodeToRenderNode(vnode: VNode, index: Map<number, RenderNode>): RenderNode {
-  const children: RenderNode[] = (vnode.children ?? []).map((c) => vnodeToRenderNode(c, index));
+export function vnodeToRenderNode(vnode: VNode, index: Map<number, RenderNode>, version: bigint = 0n): RenderNode {
+  const children: RenderNode[] = (vnode.children ?? []).map((c) => vnodeToRenderNode(c, index, version));
 
   const node: RenderNode = {
     id: vnode.id,
     type: vnode.type,
     props: { ...vnode.props },
     children,
+    version,
   };
 
   if (vnode.textAlt !== undefined) {
@@ -38,30 +42,40 @@ export function vnodeToRenderNode(vnode: VNode, index: Map<number, RenderNode>):
 }
 
 /** Set the root of a render tree from a VNode. */
-export function setTreeRoot(tree: RenderTree, root: VNode): void {
+export function setTreeRoot(tree: RenderTree, root: VNode, version: bigint = 0n): void {
   tree.nodeIndex.clear();
-  tree.root = vnodeToRenderNode(root, tree.nodeIndex);
+  tree.root = vnodeToRenderNode(root, tree.nodeIndex, version);
 }
 
-/** Apply a single patch operation to a render tree. */
-export function applyPatch(tree: RenderTree, op: PatchOp): boolean {
+/** Apply a single patch operation to a render tree.
+ *  When version is provided, the patch is skipped if the target node
+ *  already has a newer version (per-node staleness check). */
+export function applyPatch(tree: RenderTree, op: PatchOp, version: bigint = 0n): boolean {
   if (op.remove) {
+    // For removal, check staleness of the target node
+    const existing = tree.nodeIndex.get(op.target);
+    if (existing && version > 0n && existing.version > version) return false;
     return removeNode(tree, op.target);
   }
 
   if (op.replace) {
-    return replaceNode(tree, op.target, op.replace);
+    const existing = tree.nodeIndex.get(op.target);
+    if (existing && version > 0n && existing.version > version) return false;
+    return replaceNode(tree, op.target, op.replace, version);
   }
 
   const node = tree.nodeIndex.get(op.target);
   if (!node) return false;
+
+  // Per-node staleness: skip if this node was already updated by a newer seq
+  if (version > 0n && node.version > version) return false;
 
   if (op.set) {
     Object.assign(node.props, op.set);
   }
 
   if (op.childrenInsert) {
-    const child = vnodeToRenderNode(op.childrenInsert.node, tree.nodeIndex);
+    const child = vnodeToRenderNode(op.childrenInsert.node, tree.nodeIndex, version);
     const idx = Math.min(op.childrenInsert.index, node.children.length);
     node.children.splice(idx, 0, child);
   }
@@ -83,15 +97,18 @@ export function applyPatch(tree: RenderTree, op: PatchOp): boolean {
     }
   }
 
+  // Stamp the node with this version
+  node.version = version;
+
   return true;
 }
 
 /** Apply a batch of patch operations. */
-export function applyPatches(tree: RenderTree, ops: PatchOp[]): { applied: number; failed: number } {
+export function applyPatches(tree: RenderTree, ops: PatchOp[], version: bigint = 0n): { applied: number; failed: number } {
   let applied = 0;
   let failed = 0;
   for (const op of ops) {
-    if (applyPatch(tree, op)) {
+    if (applyPatch(tree, op, version)) {
       applied++;
     } else {
       failed++;
@@ -121,7 +138,7 @@ function removeNode(tree: RenderTree, targetId: number): boolean {
 }
 
 /** Replace a node in the tree. */
-function replaceNode(tree: RenderTree, targetId: number, replacement: VNode): boolean {
+function replaceNode(tree: RenderTree, targetId: number, replacement: VNode, version: bigint = 0n): boolean {
   const existing = tree.nodeIndex.get(targetId);
   if (!existing) return false;
 
@@ -129,7 +146,7 @@ function replaceNode(tree: RenderTree, targetId: number, replacement: VNode): bo
   removeSubtreeFromIndex(tree.nodeIndex, existing);
 
   // Build new subtree
-  const newNode = vnodeToRenderNode(replacement, tree.nodeIndex);
+  const newNode = vnodeToRenderNode(replacement, tree.nodeIndex, version);
 
   // Find parent and swap
   const parent = findParent(tree.root, targetId);

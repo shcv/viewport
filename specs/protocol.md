@@ -45,11 +45,13 @@ compact ULID-equivalent that uniquely identifies a source's connection to a view
   is not applicable.
 
 **Sequence number** (8 bytes, LE u64): Monotonically increasing counter within a
-session. Incremented by the sender for each state-mutating message.
+session. Incremented by the sender for each state-mutating message. Multiple updates
+within a single logical frame may share the same seq.
 
-- Allows the viewer to discard superseded updates that arrive late (e.g., if seq=5
-  arrives after seq=7 has already been processed for the same session, it can be
-  safely dropped).
+- Staleness is checked **per-node and per-slot**, not per-frame. Each node, slot,
+  schema, and data stream tracks the seq of its last update. A late-arriving message
+  only has individual updates skipped where the target's version is already newer —
+  updates to other targets in the same message are still applied.
 - Enables idempotent delivery through proxies and unreliable transports.
 - Currently only the source increments seq (the viewer's INPUT messages back to the
   app use the viewer's own session/seq).

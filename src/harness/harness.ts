@@ -55,6 +55,7 @@ export class TestHarness {
   private _width: number;
   private _height: number;
   private startTime: number = 0;
+  private seq: bigint = 0n;
 
   constructor(config: HarnessConfig) {
     this.app = config.app;
@@ -231,6 +232,9 @@ export class TestHarness {
 
   /** Encode → measure → decode → process pipeline. */
   private pipeToViewer(msg: ProtocolMessage): void {
+    // Increment sequence number for each state-mutating message
+    this.seq++;
+
     // Encode
     const encodeStart = performance.now();
     const encoded = this.protocol.encode(msg);
@@ -244,13 +248,13 @@ export class TestHarness {
     const decoded = this.protocol.decode(encoded);
     const decodeTime = performance.now() - decodeStart;
 
-    // Process in viewer
+    // Process in viewer with seq for per-node/slot version tracking
     const processStart = performance.now();
     // Track bytes if the viewer supports it
     if ('trackBytes' in this.viewer && typeof (this.viewer as any).trackBytes === 'function') {
       (this.viewer as any).trackBytes(wireBytes);
     }
-    this.viewer.processMessage(decoded);
+    this.viewer.processMessage(decoded, this.seq);
     const processTime = performance.now() - processStart;
 
     // Record

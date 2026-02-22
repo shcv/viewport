@@ -73,26 +73,31 @@ export class GpuViewer implements ViewerBackend {
     this.dirty = true;
   }
 
-  processMessage(msg: ProtocolMessage): void {
+  processMessage(msg: ProtocolMessage, seq?: bigint): void {
     const start = performance.now();
+    const version = seq ?? 0n;
     this._metrics.messagesProcessed++;
 
     switch (msg.type) {
-      case MessageType.DEFINE:
+      case MessageType.DEFINE: {
+        const prev = this.tree.slotVersions.get(msg.slot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         this.tree.slots.set(msg.slot, msg.value);
+        this.tree.slotVersions.set(msg.slot, version);
         this._metrics.slotCount = this.tree.slots.size;
         this.dirty = true;
         break;
+      }
 
       case MessageType.TREE:
-        setTreeRoot(this.tree, msg.root);
+        setTreeRoot(this.tree, msg.root, version);
         this._metrics.treeNodeCount = countNodes(this.tree.root);
         this._metrics.treeDepth = treeDepth(this.tree.root);
         this.dirty = true;
         break;
 
       case MessageType.PATCH: {
-        const { applied, failed } = applyPatches(this.tree, msg.ops);
+        const { applied, failed } = applyPatches(this.tree, msg.ops, version);
         this._metrics.patchesApplied += applied;
         this._metrics.patchesFailed += failed;
         this._metrics.treeNodeCount = countNodes(this.tree.root);
@@ -101,12 +106,18 @@ export class GpuViewer implements ViewerBackend {
         break;
       }
 
-      case MessageType.SCHEMA:
+      case MessageType.SCHEMA: {
+        const prev = this.tree.schemaVersions.get(msg.slot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         this.tree.schemas.set(msg.slot, msg.columns);
+        this.tree.schemaVersions.set(msg.slot, version);
         break;
+      }
 
       case MessageType.DATA: {
         const schemaSlot = msg.schema ?? 0;
+        const prev = this.tree.dataVersions.get(schemaSlot);
+        if (prev !== undefined && version > 0n && prev > version) break;
         if (!this.tree.dataRows.has(schemaSlot)) {
           this.tree.dataRows.set(schemaSlot, []);
         }
@@ -114,6 +125,7 @@ export class GpuViewer implements ViewerBackend {
         if (rowArray) {
           this.tree.dataRows.get(schemaSlot)!.push(rowArray);
         }
+        this.tree.dataVersions.set(schemaSlot, version);
         this._metrics.dataRowCount++;
         break;
       }
